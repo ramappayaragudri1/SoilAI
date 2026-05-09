@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoilAI Cloud Lab — Multi-Site Soil Comparison</title>
+  <meta name="description" content="Compare Geotechnical Compaction characteristics across multiple sites.">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    .site-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .site-card:hover {
+      background: rgba(15, 23, 42, 0.8);
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+    .site-card.selected {
+      border-color: #3b82f6;
+      background: rgba(59, 130, 246, 0.08);
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+    }
+    .site-card.selected::after {
+      content: '✓';
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #3b82f6;
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .site-selector-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+    
+    .rank-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .rank-1 { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .rank-2 { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .rank-3 { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="toast" id="toast"></div>
+
+  <div class="app-layout">
+    <!-- ═══ SIDEBAR ═══════════════════════════════════════════ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div style="font-size:22px;">🧪</div>
+        <div>
+          <div class="app-name">SoilAI Cloud Lab</div>
+          <div class="app-tagline">Geo Analytics</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Modules</div>
+        <a href="/dashboard" class="nav-link"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="/moisture" class="nav-link"><span class="nav-icon">💧</span> Moisture Content</a>
+        <a href="/proctor" class="nav-link"><span class="nav-icon">🧪</span> Proctor Test</a>
+        <a href="/compare" class="nav-link active"><span class="nav-icon">🌍</span> Compare Sites</a>
+        <a href="/reports" class="nav-link"><span class="nav-icon">📄</span> Reports</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost" style="width:100%;justify-content:center;gap:8px" id="logout-btn">
+          🚪 Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- ═══ MAIN ═══════════════════════════════════════════════ -->
+    <div class="main-content">
+      <header class="navbar">
+        <div style="display:flex;align-items:center;gap:14px">
+          <button class="btn btn-ghost btn-icon" id="menu-toggle">☰</button>
+          <div class="navbar-title">
+            🌍 <span>Multi-Site Comparison</span>
+          </div>
+        </div>
+        <div class="navbar-actions">
+          <span id="connection-status" style="font-size:12px;color:#10b981;font-weight:600">● Live Sync</span>
+          <div class="user-chip">
+            <div class="user-avatar" id="user-avatar">E</div>
+            <span class="user-name" id="user-display-name">Engineer</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="page-body">
+        <div class="page-header fade-in">
+          <h1 class="page-title">Multi-Site Soil Comparison</h1>
+          <p class="page-desc">Select up to 3 saved sites from Firestore to compare their geotechnical characteristics and suitability.</p>
+        </div>
+
+        <!-- Site Selection -->
+        <div class="glass fade-in" style="padding: 24px; margin-bottom: 24px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+            <div class="section-divider" style="margin-bottom:0">📌 Select Sites to Compare (Max 3)</div>
+            <span class="badge badge-info" id="selection-counter">0 / 3 Selected</span>
+          </div>
+          
+          <div id="site-selector" class="site-selector-grid">
+            <div style="text-align:center;padding:40px;color:#475569;grid-column: 1 / -1;">
+              <div class="loading-spinner-lg" style="width:28px;height:28px;margin:0 auto 10px"></div>
+              Loading tests from Firestore…
+            </div>
+          </div>
+          
+          <button id="run-compare-btn" class="btn btn-primary" style="width:100%;justify-content:center" disabled>
+            ⚡ Run Comparative Analysis
+          </button>
+        </div>
+
+        <!-- Comparison Results (Hidden initially) -->
+        <div id="comparison-results" style="display:none;" class="fade-in">
+          
+          <!-- Graph & Recommendation Container -->
+          <div class="grid-5-3" style="margin-bottom:24px">
+            <!-- Overlay Chart -->
+            <div class="glass chart-card">
+              <div class="chart-card-header">
+                <span class="chart-card-title">📈 Comparative Compaction Curves</span>
+              </div>
+              <div class="chart-wrapper" style="height:350px">
+                <canvas id="compare-chart"></canvas>
+              </div>
+            </div>
+
+            <!-- Engineering Recommendation -->
+            <div class="glass" style="padding:24px; display:flex; flex-direction:column;">
+              <div class="section-divider" style="margin-bottom:16px">🧠 Final Engineering Recommendation</div>
+              <div id="auto-recommendation" style="font-size: 14px; line-height: 1.6; color: #e2e8f0; flex: 1;">
+                <!-- Auto-generated paragraph goes here -->
+              </div>
+              <div style="margin-top: 20px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                <div style="font-size: 11px; color: #60a5fa; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">SoilAI Cloud Engine</div>
+                <div style="font-size: 12px; color: #94a3b8;">Recommendations are synthesized based on relative Maximum Dry Density (MDD) and Optimum Moisture Content (OMC) behaviors.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Site Ranking Table -->
+          <div class="glass table-card">
+            <div class="table-card-header">
+              <span class="table-card-title">🏆 Site Ranking & Characteristics</span>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Site / Test Name</th>
+                    <th>MDD (g/cc)</th>
+                    <th>OMC (%)</th>
+                    <th>Predicted Soil Type</th>
+                    <th>Suitability</th>
+                  </tr>
+                </thead>
+                <tbody id="ranking-tbody">
+                  <!-- Rankings injected here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script type="module" src="/js/compare.js"></script>
+</body>
+</html>

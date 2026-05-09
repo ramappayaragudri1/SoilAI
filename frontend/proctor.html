@@ -24,6 +24,7 @@
       <a href="/dashboard" class="nav-link"><span class="nav-icon">📊</span> Dashboard</a>
       <a href="/moisture" class="nav-link"><span class="nav-icon">💧</span> Moisture Content</a>
       <a href="/proctor" class="nav-link active"><span class="nav-icon">🧪</span> Proctor Test</a>
+      <a href="/compare" class="nav-link"><span class="nav-icon">🌍</span> Compare Sites</a>
       <a href="/reports" class="nav-link"><span class="nav-icon">📄</span> Reports</a>
     </nav>
     <div class="sidebar-footer">
@@ -337,18 +338,40 @@
             Please run the complete analysis to generate engineering insights based on your trial data.
           </div>
 
-          <div class="grid-2" style="margin-bottom: 20px;">
-            <div class="info-card glass" style="padding: 12px 16px;">
-              <div class="info-title" style="font-size: 12px;">📈 Average Performance</div>
-              <div class="info-desc" style="font-size: 12px;">
-                Average Moisture: <span id="avg-mc-val" class="text-highlight">—</span><br>
-                Average Dry Density: <span id="avg-dd-val" class="text-highlight">—</span>
+          <!-- Trial Comparison Analytics -->
+          <div class="grid-3" style="margin-bottom: 20px; gap: 14px;">
+            <div class="info-card glass" style="padding: 16px; border-left: 3px solid #10b981;">
+              <div class="info-title" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">🏆 Best Trial</div>
+              <div id="comp-best-trial" class="info-desc" style="font-size: 13px; font-weight: 500; margin-top: 8px; color: #e2e8f0;">
+                Waiting for analysis...
               </div>
             </div>
-            <div class="info-card glass" style="padding: 12px 16px; border-left-color: var(--amber);">
-              <div class="info-title" style="font-size: 12px;">⚖️ Result Comparison</div>
-              <div id="comparison-text" class="info-desc" style="font-size: 12px;">
-                Waiting for OMC/MDD data to compare with field trials...
+            <div class="info-card glass" style="padding: 16px; border-left: 3px solid #f43f5e;">
+              <div class="info-title" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">📉 Lowest Density</div>
+              <div id="comp-lowest-density" class="info-desc" style="font-size: 13px; font-weight: 500; margin-top: 8px; color: #e2e8f0;">
+                Waiting for analysis...
+              </div>
+            </div>
+            <div class="info-card glass" style="padding: 16px; border-left: 3px solid #3b82f6;">
+              <div class="info-title" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">⚖️ Most Stable Trial</div>
+              <div id="comp-most-stable" class="info-desc" style="font-size: 13px; font-weight: 500; margin-top: 8px; color: #e2e8f0;">
+                Waiting for analysis...
+              </div>
+            </div>
+          </div>
+
+          <!-- Soil Suitability Analysis -->
+          <div class="grid-2" style="margin-bottom: 20px; gap: 14px;">
+            <div class="info-card glass" style="padding: 16px; border-left: 3px solid #fbbf24;">
+              <div class="info-title" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">🌍 Predicted Soil Type</div>
+              <div id="comp-soil-type" class="info-desc" style="font-size: 14px; font-weight: 600; margin-top: 8px; color: #fbbf24;">
+                Waiting for analysis...
+              </div>
+            </div>
+            <div class="info-card glass" style="padding: 16px; border-left: 3px solid #34d399;">
+              <div class="info-title" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700;">🏗️ Construction Suitability</div>
+              <div id="comp-suitability" class="info-desc" style="font-size: 14px; font-weight: 600; margin-top: 8px; color: #34d399;">
+                Waiting for analysis...
               </div>
             </div>
           </div>

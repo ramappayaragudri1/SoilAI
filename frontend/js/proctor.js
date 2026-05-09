@@ -303,8 +303,9 @@ window.runFullAnalysis = async () => {
   document.getElementById('graph-mdd').textContent = mdd.toFixed(3) + ' g/cc';
 
   // --- Engineering Interpretation Populating ---
-  document.getElementById('avg-mc-val').textContent = avgMc.toFixed(2) + '%';
-  document.getElementById('avg-dd-val').textContent = avgDd.toFixed(3) + ' g/cc';
+  // (Old avg cards removed in UI update)
+  // document.getElementById('avg-mc-val').textContent = avgMc.toFixed(2) + '%';
+  // document.getElementById('avg-dd-val').textContent = avgDd.toFixed(3) + ' g/cc';
 
   // Dynamic Engineering Summary
   const summaryEl = document.getElementById('eng-summary');
@@ -332,14 +333,14 @@ window.runFullAnalysis = async () => {
     statusText.textContent = 'Poor Compaction';
   }
 
-  // Comparison Text
-  const compText = document.getElementById('comparison-text');
-  const mcDiff = avgMc - omc;
-  if (Math.abs(mcDiff) < 1.5) {
-    compText.innerHTML = "Moisture is <span class='text-success'>near optimal</span> (within ±1.5% of OMC). Excellent field control.";
-  } else {
-    compText.innerHTML = `Field moisture is <span class='text-warning'>${mcDiff > 0 ? 'above' : 'below'}</span> OMC by ${Math.abs(mcDiff).toFixed(1)}%. Adjustments recommended.`;
-  }
+  // Comparison Text (Old comparison card removed in UI update)
+  // const compText = document.getElementById('comparison-text');
+  // const mcDiff = avgMc - omc;
+  // if (Math.abs(mcDiff) < 1.5) {
+  //   compText.innerHTML = "Moisture is <span class='text-success'>near optimal</span> (within ±1.5% of OMC). Excellent field control.";
+  // } else {
+  //   compText.innerHTML = `Field moisture is <span class='text-warning'>${mcDiff > 0 ? 'above' : 'below'}</span> OMC by ${Math.abs(mcDiff).toFixed(1)}%. Adjustments recommended.`;
+  // }
 
   // Dynamic Conclusion Box
   const concText = document.getElementById('conclusion-text');
@@ -537,7 +538,64 @@ window.runFullAnalysis = async () => {
       </div>
     `;
   });
-  
+
+  // ── 1. Trial Comparison Analytics ────────────────────────────────────────
+  // Find best, lowest, and most stable trials
+  let bestTrial = trials[0];
+  let lowestTrial = trials[0];
+  let mostStableTrial = trials[0];
+
+  trials.forEach(t => {
+    if (t.dd > bestTrial.dd) bestTrial = t;
+    if (t.dd < lowestTrial.dd) lowestTrial = t;
+    // Most stable is the one with highest wet density relative to dry density (lowest void ratio implication roughly)
+    // Actually, engineering-wise, most stable is closest to OMC without exceeding it.
+    const currentDiff = Math.abs(t.mc - omc);
+    const stableDiff = Math.abs(mostStableTrial.mc - omc);
+    if (currentDiff < stableDiff) mostStableTrial = t;
+  });
+
+  const bestEl = document.getElementById('comp-best-trial');
+  if (bestEl) bestEl.innerHTML = `Trial ${bestTrial.trialIndex} achieved highest compaction.<br><span style="color:#10b981;font-size:11px">DD: ${bestTrial.dd.toFixed(3)} g/cc at ${bestTrial.mc.toFixed(1)}% MC</span>`;
+
+  const lowestEl = document.getElementById('comp-lowest-density');
+  if (lowestEl) lowestEl.innerHTML = `Trial ${lowestTrial.trialIndex} shows lower dry density.<br><span style="color:#f43f5e;font-size:11px">DD: ${lowestTrial.dd.toFixed(3)} g/cc at ${lowestTrial.mc.toFixed(1)}% MC</span>`;
+
+  const stableEl = document.getElementById('comp-most-stable');
+  if (stableEl) {
+    if (mostStableTrial.mc > omc) {
+      stableEl.innerHTML = `Trial ${mostStableTrial.trialIndex} contains excess moisture but is nearest to optimum.<br><span style="color:#3b82f6;font-size:11px">Off peak by ${Math.abs(mostStableTrial.mc - omc).toFixed(1)}%</span>`;
+    } else {
+      stableEl.innerHTML = `Trial ${mostStableTrial.trialIndex} exhibits the most stable pre-peak compaction.<br><span style="color:#3b82f6;font-size:11px">Off peak by ${Math.abs(mostStableTrial.mc - omc).toFixed(1)}%</span>`;
+    }
+  }
+
+  // ── 2. Soil Suitability & Type Prediction ────────────────────────────────
+  const typeEl = document.getElementById('comp-soil-type');
+  const suitEl = document.getElementById('comp-suitability');
+
+  let predictedType = "Unknown Soil Blend";
+  let suitability = "Pending analysis";
+
+  if (mdd > 1.9) {
+    predictedType = "Sandy / Gravelly Soil (Well-graded)";
+    suitability = "Excellent load-bearing capacity. Highly suitable for sub-base and heavy road construction.";
+  } else if (mdd > 1.7 && mdd <= 1.9) {
+    if (omc < 15) {
+      predictedType = "Silty Sand / Sandy Clay";
+      suitability = "Good compaction characteristics. Suitable for foundation filling and general embankments.";
+    } else {
+      predictedType = "Silty Soil";
+      suitability = "Moderate compaction quality. Requires careful moisture control during field rolling.";
+    }
+  } else {
+    predictedType = "Clayey Soil (High Plasticity)";
+    suitability = "Poor compaction quality. Likely requires chemical stabilization (lime/cement) before use in roads.";
+  }
+
+  if (typeEl) typeEl.textContent = predictedType;
+  if (suitEl) suitEl.textContent = suitability;
+
   // Save to Firestore
   try {
     const payload = {

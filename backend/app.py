@@ -46,6 +46,11 @@ def proctor():
 def reports():
     return send_from_directory('../frontend', 'reports.html')
 
+@app.route('/compare')
+def compare():
+    return send_from_directory('../frontend', 'compare.html')
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # API: Soil Test Calculation Engine
 # ──────────────────────────────────────────────────────────────────────────────
