@@ -1,0 +1,166 @@
+# SoilAI Cloud Lab 🧪
+
+**Professional Geotechnical Engineering Analytics Platform**  
+*Cloud Computing & Distributed Computing Systems Demo*
+
+---
+
+## Overview
+
+SoilAI Cloud Lab is a full-stack web application for soil compaction analysis using:
+- **Flask** (Python) REST API backend
+- **Firebase Authentication** (login / signup / password reset)
+- **Firebase Firestore** real-time distributed database
+- **Chart.js** interactive compaction curves
+- **jsPDF** professional PDF report generation
+- Dark glassmorphism engineering UI
+
+---
+
+## Features
+
+| Feature | Description |
+|---|---|
+| 🔐 Auth | Firebase login, signup, forgot password |
+| 🧪 Soil Test | Dynamic trial input, live MC/DD preview |
+| ⚡ Calculations | MC, Dry Density, OMC, MDD via Flask API |
+| 📊 Charts | Moisture Content vs Dry Density curve with OMC/MDD highlight |
+| ☁️ Cloud Sync | Firestore real-time sync across all users/devices |
+| 💡 AI Recommendations | Rule-based compaction advice |
+| 📄 PDF Reports | Full engineering reports with jsPDF |
+
+---
+
+## Formulas
+
+```
+Moisture Content (%) = ((W2 - W3) / (W3 - W1)) × 100
+
+Dry Density (g/cm³)  = Wet Density / (1 + MC / 100)
+
+OMC  = Moisture Content at Maximum Dry Density
+MDD  = Maximum value of Dry Density across all trials
+```
+
+---
+
+## Project Structure
+
+```
+SoilAI/
+├── backend/
+│   ├── app.py              # Flask REST API
+│   ├── calculations.py     # Core geotechnical engine
+│   └── requirements.txt    # Python dependencies
+├── frontend/
+│   ├── index.html          # Login page
+│   ├── signup.html         # Signup page
+│   ├── forgot-password.html
+│   ├── dashboard.html      # Analytics dashboard
+│   ├── soil-test.html      # Test input + results
+│   ├── reports.html        # Reports listing
+│   ├── css/
+│   │   ├── main.css        # Global design system
+│   │   ├── auth.css        # Auth pages
+│   │   └── dashboard.css   # Dashboard & test pages
+│   └── js/
+│       ├── firebase-config.js  # Firebase init & config
+│       ├── auth.js             # Authentication logic
+│       ├── dashboard.js        # Real-time dashboard
+│       ├── soil-test.js        # Test input & PDF
+│       └── charts.js           # Chart.js integration
+└── README.md
+```
+
+---
+
+## Setup & Running
+
+### 1. Install Python Dependencies
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+### 2. Run the Flask Server
+
+```bash
+cd backend
+python app.py
+```
+
+The server starts at **http://localhost:5000**
+
+### 3. Open the App
+
+Visit **http://localhost:5000** in your browser.
+
+Flask serves the entire `frontend/` directory as static files.
+
+---
+
+## Firebase Configuration
+
+The Firebase project is pre-configured in `frontend/js/firebase-config.js`:
+
+```
+Project ID:   soilai-691b5
+Auth Domain:  soilai-691b5.firebaseapp.com
+```
+
+**Firestore Security Rules** (set in Firebase Console):
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /soilTests/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null;
+    }
+    match /activityLog/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null;
+    }
+  }
+}
+```
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET  | `/api/health` | Server health & distributed system info |
+| POST | `/api/calculate` | Full test calculation (OMC, MDD, all trials) |
+| POST | `/api/calculate/single-trial` | Live preview for one trial |
+| POST | `/api/recommendations` | Get compaction recommendations |
+| GET  | `/api/sample-data` | Load demo data |
+| GET  | `/api/system-info` | Cloud architecture info |
+
+---
+
+## Distributed Computing Concepts Demonstrated
+
+1. **Firebase Firestore** — NoSQL distributed cloud database with automatic multi-region replication
+2. **Firestore `onSnapshot`** — Real-time push sync: all connected clients see updates instantly
+3. **Firebase Authentication** — Federated identity management with JWT tokens
+4. **Multi-user concurrent access** — Multiple engineers can run tests simultaneously
+5. **Offline resilience** — Firestore SDK caches data locally when offline
+6. **Cloud-deployable API** — Flask backend can be deployed to GCP, AWS, or Azure
+
+---
+
+## Technology Stack
+
+- **Frontend**: HTML5, CSS3 (Glassmorphism), Vanilla JS ES Modules
+- **Backend**: Python 3.10+, Flask, Flask-CORS
+- **Database**: Firebase Firestore (Google Cloud NoSQL)
+- **Auth**: Firebase Authentication (OAuth2 / JWT)
+- **Charts**: Chart.js 4.x
+- **PDF**: jsPDF 2.x
+- **Fonts**: Inter, JetBrains Mono (Google Fonts)

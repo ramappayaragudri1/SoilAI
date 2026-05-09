@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoilAI Cloud Lab — Soil Test</title>
+  <meta name="description" content="Run a new soil compaction test — enter trial data and calculate OMC and MDD automatically.">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <div class="app-layout">
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div style="font-size:22px">🧪</div>
+        <div>
+          <div class="app-name">SoilAI Cloud Lab</div>
+          <div class="app-tagline">Geo Analytics</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="/dashboard" class="nav-link"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="/soil-test" class="nav-link active"><span class="nav-icon">🧪</span> Soil Test</a>
+        <a href="/reports" class="nav-link"><span class="nav-icon">📄</span> Reports</a>
+        <div class="nav-section-label" style="margin-top:8px">Distributed Systems</div>
+        <div class="nav-link" style="cursor:default">
+          <span class="nav-icon">🔄</span>
+          <span style="flex:1">Sync Status</span>
+          <span id="connection-status" style="font-size:11px;color:#10b981">● Live</span>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost" style="width:100%;justify-content:center" id="logout-btn">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- ═══ MAIN ═══ -->
+    <div class="main-content">
+      <!-- Navbar -->
+      <header class="navbar">
+        <div style="display:flex;align-items:center;gap:14px">
+          <button class="btn btn-ghost btn-icon" id="menu-toggle">☰</button>
+          <div class="navbar-title">🧪 <span>New Soil Test</span></div>
+        </div>
+        <div class="navbar-actions">
+          <span style="font-size:12px;color:#10b981;font-weight:600">● Live Sync</span>
+          <div class="user-chip">
+            <div class="user-avatar" id="user-avatar">E</div>
+            <span class="user-name" id="user-display-name">Engineer</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="page-body">
+        <!-- Header -->
+        <div class="page-header fade-in" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px">
+          <div>
+            <h1 class="page-title">Soil Compaction Test</h1>
+            <p class="page-desc">Enter trial data → Calculate OMC & MDD → Save to Firestore cloud</p>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" onclick="loadSampleData()">📋 Load Sample Data</button>
+            <button class="btn btn-primary" onclick="runCalculation()" id="calculate-btn">⚡ Run Calculation</button>
+          </div>
+        </div>
+
+        <!-- ── Test Info Card ── -->
+        <div class="glass" style="padding:24px;margin-bottom:22px" class="fade-in">
+          <div class="section-divider" style="margin-bottom:18px">📋 Test Information</div>
+          <div class="grid-3" style="gap:16px">
+            <div class="form-group">
+              <label class="form-label">Test Name</label>
+              <input type="text" id="test-name" class="form-input" placeholder="e.g. Site A Compaction Test">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Location / Site</label>
+              <input type="text" id="test-location" class="form-input" placeholder="e.g. Block-C, Runway Area">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Soil Type</label>
+              <select id="soil-type" class="form-input">
+                <option value="">— Select —</option>
+                <option>Silty Clay</option>
+                <option>Sandy Clay</option>
+                <option>Gravelly Sand</option>
+                <option>Clayey Silt</option>
+                <option>Well-graded Gravel</option>
+                <option>Poorly-graded Sand</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Formula Reference ── -->
+        <div class="glass" style="padding:16px 22px;margin-bottom:22px;display:flex;gap:28px;flex-wrap:wrap;align-items:center">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#475569">Formulas</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#60a5fa">
+            MC (%) = (W2−W3) / (W3−W1) × 100
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#34d399">
+            DD = Wet Density / (1 + MC/100)
+          </div>
+          <div style="font-size:12px;color:#94a3b8;margin-left:auto">
+            OMC = MC @ max DD &nbsp;|&nbsp; MDD = max(Dry Density)
+          </div>
+        </div>
+
+        <!-- ── Trial Cards ── -->
+        <div class="section-divider" style="margin-bottom:18px">🔬 Trial Data Input</div>
+
+        <div id="trials-container" style="display:flex;flex-direction:column;gap:16px">
+          <!-- Trial 1 -->
+          <div class="trial-card fade-in">
+            <div class="trial-header">
+              <div class="trial-badge">
+                <span class="trial-label">Trial</span>
+                <span class="trial-number">1</span>
+              </div>
+              <div class="trial-live-result" id="live-result-1">
+                <span class="live-mc">MC: —</span>
+                <span class="live-dd">DD: —</span>
+              </div>
+              <button class="remove-trial-btn" onclick="removeTrial(this)" disabled>✕</button>
+            </div>
+            <div class="trial-fields">
+              <div class="field-group">
+                <label>W1 — Empty Container (g)</label>
+                <input type="number" name="W1" placeholder="e.g. 25.0" step="0.01" min="0" oninput="previewTrial(this)" class="trial-input">
+              </div>
+              <div class="field-group">
+                <label>W2 — Container + Wet Soil (g)</label>
+                <input type="number" name="W2" placeholder="e.g. 185.0" step="0.01" min="0" oninput="previewTrial(this)" class="trial-input">
+              </div>
+              <div class="field-group">
+                <label>W3 — Container + Dry Soil (g)</label>
+                <input type="number" name="W3" placeholder="e.g. 160.0" step="0.01" min="0" oninput="previewTrial(this)" class="trial-input">
+              </div>
+              <div class="field-group">
+                <label>Wet Density (g/cm³)</label>
+                <input type="number" name="wet_density" placeholder="e.g. 1.85" step="0.001" min="0" oninput="previewTrial(this)" class="trial-input">
+              </div>
+            </div>
+          </div>
+
+          <!-- Trial 2 -->
+          <div class="trial-card fade-in" style="animation-delay:0.05s">
+            <div class="trial-header">
+              <div class="trial-badge">
+                <span class="trial-label">Trial</span>
+                <span class="trial-number">2</span>
+              </div>
+              <div class="trial-live-result" id="live-result-2">
+                <span class="live-mc">MC: —</span>
+                <span class="live-dd">DD: —</span>
+              </div>
+              <button class="remove-trial-btn" onclick="removeTrial(this)" disabled>✕</button>
+            </div>
+            <div class="trial-fields">
+              <div class="field-group">
+                <label>W1 — Empty Container (g)</label>
+                <input type="number" name="W1" placeholder="e.g. 25.5" step="0.01" min="0" oninput="previewTrial(this)" class="trial-input">
+              </div>
+              <div class="field-group">
+                <label>W2 — Container + Wet Soil (g)</label>
+                <input type="number" name="W2" placeholder="e.g. 195.0" step="0.01" min="0" oninput="previewTrial(this)" class="trial-input">
+              </div>
+              <div class="field-group">
+                <label>W3 — Container + Dry Soil (g)</label>
+                <input type="number" name="W3" placeholder="e.g. 167.0" step="0.01" min="0" oninput="previewTrial(this)" class="trial-input">
+              </div>
+              <div class="field-group">
+                <label>Wet Density (g/cm³)</label>
+                <input type="number" name="wet_density" placeholder="e.g. 1.92" step="0.001" min="0" oninput="previewTrial(this)" class="trial-input">
+              </div>
+            </div>
+          </div>
+
+          <!-- Trial 3 -->
+          <div class="trial-card fade-in" style="animation-delay:0.10s">
+            <div class="trial-header">
+              <div class="trial-badge">
+                <span class="trial-label">Trial</span>
+                <span class="trial-number">3</span>
+              </div>
+              <div class="trial-live-result" id="live-result-3">
+                <span class="live-mc">MC: —</span>
+                <span class="live-dd">DD: —</span>
+              </div>
+              <button class="remove-trial-btn" onclick="removeTrial(this)">✕</button>
+            </div>
+            <div class="trial-fields">
+              <div class="field-group">
+                <label>W1 — Empty Container (g)</label>
+                <input type="number" name="W1" placeholder="e.g. 24.8" step="0.01" min="0" oninput="previewTrial(this)" class="trial-input">
+              </div>
+              <div class="field-group">
+                <label>W2 — Container + Wet Soil (g)</label>
+                <input type="number" name="W2" placeholder="e.g. 200.0" step="0.01" min="0" oninput="previewTrial(this)" class="trial-input">
+              </div>
+              <div class="field-group">
+                <label>W3 — Container + Dry Soil (g)</label>
+                <input type="number" name="W3" placeholder="e.g. 170.0" step="0.01" min="0" oninput="previewTrial(this)" class="trial-input">
+              </div>
+              <div class="field-group">
+                <label>Wet Density (g/cm³)</label>
+                <input type="number" name="wet_density" placeholder="e.g. 1.98" step="0.001" min="0" oninput="previewTrial(this)" class="trial-input">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Trial Button -->
+        <div class="add-trial-zone" onclick="addTrial()" style="margin-top:14px">
+          ＋ Add Another Trial
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display:flex;gap:14px;margin-top:22px;justify-content:flex-end;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="loadSampleData()">📋 Load Sample Data</button>
+          <button class="btn btn-primary btn-lg" onclick="runCalculation()" id="calculate-btn">
+            ⚡ Run Calculation & Save to Cloud
+          </button>
+        </div>
+
+        <!-- ═══ RESULTS SECTION ═══ -->
+        <div id="results-section" style="margin-top:32px">
+          <div class="section-divider" style="margin-bottom:20px">📊 Calculation Results</div>
+
+          <!-- Key Metrics -->
+          <div class="grid-4" style="margin-bottom:22px" id="metrics-grid">
+            <div class="result-metric glass">
+              <div class="result-metric-label">Optimum Moisture Content</div>
+              <div class="result-metric-value omc" id="result-omc">—</div>
+              <div class="result-metric-unit">% (OMC)</div>
+            </div>
+            <div class="result-metric glass">
+              <div class="result-metric-label">Maximum Dry Density</div>
+              <div class="result-metric-value mdd" id="result-mdd">—</div>
+              <div class="result-metric-unit">g/cm³ (MDD)</div>
+            </div>
+            <div class="result-metric glass">
+              <div class="result-metric-label">Average Moisture Content</div>
+              <div class="result-metric-value mc" id="result-avg-mc">—</div>
+              <div class="result-metric-unit">% average</div>
+            </div>
+            <div class="result-metric glass">
+              <div class="result-metric-label">Average Dry Density</div>
+              <div class="result-metric-value dd" id="result-avg-dd">—</div>
+              <div class="result-metric-unit">g/cm³ average</div>
+            </div>
+          </div>
+
+          <!-- Chart -->
+          <div class="glass chart-card" style="margin-bottom:22px">
+            <div class="chart-card-header">
+              <span class="chart-card-title">📈 Compaction Curve — Moisture Content vs Dry Density</span>
+              <span class="badge badge-success" id="result-trials"></span>
+            </div>
+            <div style="height:380px;position:relative">
+              <canvas id="compaction-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- Trial Results Table -->
+          <div class="glass table-card" style="margin-bottom:22px">
+            <div class="table-card-header">
+              <span class="table-card-title">🔬 Trial-by-Trial Results</span>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="data-table trial-results-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>W1 (g)</th>
+                    <th>W2 (g)</th>
+                    <th>W3 (g)</th>
+                    <th>Water (g)</th>
+                    <th>Dry Soil (g)</th>
+                    <th>Wet Density</th>
+                    <th>MC (%)</th>
+                    <th>DD (g/cm³)</th>
+                  </tr>
+                </thead>
+                <tbody id="trial-results-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Recommendations -->
+          <div class="section-divider" style="margin-bottom:16px">💡 Engineering Recommendations</div>
+          <div id="recommendations-container" style="display:flex;flex-direction:column;gap:12px;margin-bottom:22px"></div>
+
+          <!-- PDF Button -->
+          <div style="text-align:center;padding:24px 0">
+            <button class="btn btn-amber btn-lg" onclick="generatePDF()" style="gap:10px">
+              📄 Generate PDF Report
+            </button>
+            <p style="font-size:12px;color:#475569;margin-top:10px">
+              Downloads a complete engineering report with trial data, graph summary, OMC, MDD, and recommendations
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Chart.js & jsPDF CDNs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script type="module" src="/js/soil-test.js"></script>
+</body>
+</html>

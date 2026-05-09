@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoilAI — Moisture Content Calculator</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
+<div class="toast" id="toast"></div>
+
+<div class="app-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div style="font-size:22px">🧪</div>
+      <div><div class="app-name">SoilAI Cloud Lab</div><div class="app-tagline">Geo Analytics</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Modules</div>
+      <a href="/dashboard" class="nav-link"><span class="nav-icon">📊</span> Dashboard</a>
+      <a href="/moisture" class="nav-link active"><span class="nav-icon">💧</span> Moisture Content</a>
+      <a href="/proctor" class="nav-link"><span class="nav-icon">🧪</span> Proctor Test</a>
+      <a href="/reports" class="nav-link"><span class="nav-icon">📄</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost" style="width:100%;justify-content:center" id="logout-btn">🚪 Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-content">
+    <header class="navbar">
+      <div style="display:flex;align-items:center;gap:14px">
+        <button class="btn btn-ghost btn-icon" id="menu-toggle">☰</button>
+        <div class="navbar-title">💧 Moisture Content Calculator</div>
+      </div>
+      <div class="navbar-actions">
+        <span style="font-size:12px;color:#10b981;font-weight:600">● Firebase Connected</span>
+        <div class="user-chip">
+          <div class="user-avatar" id="user-avatar">E</div>
+          <span class="user-name" id="user-display-name">Engineer</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <div class="page-header fade-in">
+        <h1 class="page-title">Moisture Content Calculator</h1>
+        <p class="page-desc">Calculate soil moisture content using the gravimetric method — results saved to Firebase cloud</p>
+      </div>
+
+      <div style="max-width:680px;margin:0 auto">
+
+        <!-- Formula Reference -->
+        <div class="glass" style="padding:14px 22px;margin-bottom:22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap" class="fade-in">
+          <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#475569">Formula</span>
+          <code style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#60a5fa;background:rgba(59,130,246,0.08);padding:6px 14px;border-radius:6px">
+            w (%) = ((W2 − W3) / (W3 − W1)) × 100
+          </code>
+        </div>
+
+        <!-- Input Card -->
+        <div class="glass fade-in" style="padding:28px;margin-bottom:22px">
+          <div class="section-divider" style="margin-bottom:20px">⚖️ Sample Weights</div>
+
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div class="form-group">
+              <label class="form-label" style="color:#94a3b8;font-size:13px;font-weight:600">
+                W1 — Weight of Empty Container (g)
+              </label>
+              <input type="number" id="mc-W1" class="form-input" placeholder="e.g. 25.0" step="0.01" min="0">
+              <span class="error-msg" id="err-W1"></span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="color:#94a3b8;font-size:13px;font-weight:600">
+                W2 — Weight of Container + Wet Soil (g)
+              </label>
+              <input type="number" id="mc-W2" class="form-input" placeholder="e.g. 185.0" step="0.01" min="0">
+              <span class="error-msg" id="err-W2"></span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="color:#94a3b8;font-size:13px;font-weight:600">
+                W3 — Weight of Container + Dry Soil (g)
+              </label>
+              <input type="number" id="mc-W3" class="form-input" placeholder="e.g. 160.0" step="0.01" min="0">
+              <span class="error-msg" id="err-W3"></span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" style="color:#94a3b8;font-size:13px;font-weight:600">
+                Sample / Location Label <span style="color:#475569;font-weight:400">(optional)</span>
+              </label>
+              <input type="text" id="mc-label" class="form-input" placeholder="e.g. Site A, Borehole 2, Depth 1.5m">
+            </div>
+          </div>
+
+          <div id="mc-error" style="display:none;margin-top:14px" class="error-msg"></div>
+
+          <button onclick="calculateMC()" id="mc-btn"
+            class="btn btn-primary btn-lg" style="width:100%;justify-content:center;margin-top:22px">
+            💧 Calculate Moisture Content
+          </button>
+        </div>
+
+        <!-- Result Card (hidden until calculated) -->
+        <div id="mc-result-card" class="glass fade-in" style="display:none;padding:28px;margin-bottom:22px;border-color:rgba(59,130,246,0.35)">
+          <div style="text-align:center;margin-bottom:20px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#475569;margin-bottom:10px">
+              MOISTURE CONTENT RESULT
+            </div>
+            <div id="mc-result-value" style="font-size:56px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#60a5fa;line-height:1"></div>
+            <div style="font-size:16px;color:#64748b;margin-top:6px;font-weight:600">%</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
+            <div style="background:rgba(15,23,50,0.6);border:1px solid rgba(59,130,246,0.12);border-radius:8px;padding:12px;text-align:center">
+              <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">Water Weight</div>
+              <div id="mc-water-wt" style="font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#a78bfa">— g</div>
+            </div>
+            <div style="background:rgba(15,23,50,0.6);border:1px solid rgba(59,130,246,0.12);border-radius:8px;padding:12px;text-align:center">
+              <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">Dry Soil Weight</div>
+              <div id="mc-dry-wt" style="font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#34d399">— g</div>
+            </div>
+            <div style="background:rgba(15,23,50,0.6);border:1px solid rgba(59,130,246,0.12);border-radius:8px;padding:12px;text-align:center">
+              <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">Saved To</div>
+              <div style="font-size:12px;font-weight:700;color:#10b981">☁️ Firestore</div>
+            </div>
+          </div>
+
+          <div id="mc-recommendation" style="border-radius:10px;padding:14px 18px;font-size:13px;line-height:1.5;font-weight:500"></div>
+
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <button onclick="resetMC()" class="btn btn-ghost" style="flex:1;justify-content:center">↺ Reset</button>
+            <button onclick="downloadMCPDF()" class="btn btn-amber" style="flex:1;justify-content:center">📄 Download Report</button>
+          </div>
+        </div>
+
+        <!-- History (last 5 from Firestore) -->
+        <div class="glass" style="padding:20px">
+          <div style="font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+            📋 Recent MC Tests
+            <span class="badge badge-info">Firestore Sync</span>
+          </div>
+          <div id="mc-history-list">
+            <div style="text-align:center;padding:20px;color:#475569;font-size:13px">Loading…</div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="module">
+import { auth, db, COLLECTIONS } from '/js/firebase-config.js';
+import {
+  collection, addDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+
+let currentUser = null;
+let lastResult  = null;
+
+// ── Auth Guard ───────────────────────────────────────────────
+onAuthStateChanged(auth, (user) => {
+  if (!user) { window.location.href = '/'; return; }
+  currentUser = user;
+  document.getElementById('user-display-name').textContent = user.displayName || user.email;
+  document.getElementById('user-avatar').textContent = (user.displayName || user.email || 'U')[0].toUpperCase();
+  subscribeHistory(user.uid);
+});
+
+// ── Firestore History Listener ───────────────────────────────
+function subscribeHistory(uid) {
+  const q = query(
+    collection(db, 'moistureTests'),
+    where('uid', '==', uid)
+  );
+  onSnapshot(q, (snap) => {
+    const list = document.getElementById('mc-history-list');
+    if (snap.empty) {
+      list.innerHTML = '<div style="text-align:center;padding:16px;color:#475569;font-size:13px">No tests yet. Run your first calculation above.</div>';
+      return;
+    }
+    let docs = snap.docs.map(d => d.data());
+    docs.sort((a, b) => {
+      const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return timeB - timeA;
+    });
+    docs = docs.slice(0, 5);
+    
+    list.innerHTML = docs.map(data => {
+      const date = data.createdAt?.toDate ? data.createdAt.toDate().toLocaleDateString('en-IN') : '—';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(59,130,246,0.06);font-size:13px">
+        <div>
+          <div style="font-weight:600;color:#e2e8f0">${data.label || 'Untitled Sample'}</div>
+          <div style="font-size:11px;color:#475569">${date} · W1=${data.W1} W2=${data.W2} W3=${data.W3}</div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:#60a5fa">${data.result?.toFixed(2)}%</div>
+      </div>`;
+    }).join('');
+  }, (err) => {
+    console.error('MC history error:', err);
+    document.getElementById('mc-history-list').innerHTML =
+      '<div style="text-align:center;padding:16px;color:#f87171;font-size:13px">Could not load history. Check Firestore rules.</div>';
+  });
+}
+
+// ── Calculate Moisture Content ───────────────────────────────
+window.calculateMC = async () => {
+  clearErrors();
+  const W1 = parseFloat(document.getElementById('mc-W1').value);
+  const W2 = parseFloat(document.getElementById('mc-W2').value);
+  const W3 = parseFloat(document.getElementById('mc-W3').value);
+  const label = document.getElementById('mc-label').value.trim();
+
+  // Validate
+  let valid = true;
+  if (isNaN(W1) || W1 < 0) { showFieldErr('err-W1', 'Required, must be ≥ 0'); valid = false; }
+  if (isNaN(W2) || W2 < 0) { showFieldErr('err-W2', 'Required, must be ≥ 0'); valid = false; }
+  if (isNaN(W3) || W3 < 0) { showFieldErr('err-W3', 'Required, must be ≥ 0'); valid = false; }
+  if (!valid) return;
+  if (W3 <= W1) return showErr('W3 must be greater than W1 (W3 − W1 = dry soil mass, must be > 0)');
+  if (W2 < W3)  return showErr('W2 must be ≥ W3 (wet soil cannot be lighter than dry soil)');
+
+  const waterWt = W2 - W3;
+  const drySoilWt = W3 - W1;
+  const mc = (waterWt / drySoilWt) * 100;
+
+  lastResult = { W1, W2, W3, label, result: parseFloat(mc.toFixed(4)), waterWt, drySoilWt };
+
+  // Show result card
+  document.getElementById('mc-result-value').textContent = mc.toFixed(4);
+  document.getElementById('mc-water-wt').textContent = waterWt.toFixed(4) + ' g';
+  document.getElementById('mc-dry-wt').textContent = drySoilWt.toFixed(4) + ' g';
+  document.getElementById('mc-result-card').style.display = 'block';
+  document.getElementById('mc-result-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  // Recommendation
+  const recEl = document.getElementById('mc-recommendation');
+  if (mc < 10) {
+    recEl.style.background = 'rgba(245,158,11,0.1)';
+    recEl.style.border = '1px solid rgba(245,158,11,0.25)';
+    recEl.innerHTML = '⚠️ <strong style="color:#fbbf24">Low Moisture</strong> — Soil is very dry. Add water to improve workability and compaction.';
+  } else if (mc > 30) {
+    recEl.style.background = 'rgba(239,68,68,0.1)';
+    recEl.style.border = '1px solid rgba(239,68,68,0.25)';
+    recEl.innerHTML = '🔥 <strong style="color:#f87171">High Moisture</strong> — Soil is very wet. Allow to dry before compaction.';
+  } else {
+    recEl.style.background = 'rgba(16,185,129,0.1)';
+    recEl.style.border = '1px solid rgba(16,185,129,0.25)';
+    recEl.innerHTML = '✅ <strong style="color:#34d399">Acceptable Moisture Range</strong> — Proceed to compaction analysis for precise OMC determination.';
+  }
+
+  // Save to Firestore
+  if (currentUser) {
+    try {
+      await addDoc(collection(db, 'moistureTests'), {
+        uid: currentUser.uid, W1, W2, W3, label,
+        result: parseFloat(mc.toFixed(4)),
+        waterWt: parseFloat(waterWt.toFixed(4)),
+        drySoilWt: parseFloat(drySoilWt.toFixed(4)),
+        createdAt: serverTimestamp()
+      });
+      showToast('Result saved to Firebase Firestore ☁️', 'success');
+    } catch(e) {
+      showToast('Saved locally — Firestore: ' + e.message, 'warning');
+    }
+  }
+};
+
+window.resetMC = () => {
+  ['mc-W1','mc-W2','mc-W3','mc-label'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mc-result-card').style.display = 'none';
+  lastResult = null;
+  clearErrors();
+};
+
+window.downloadMCPDF = () => {
+  if (!lastResult) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const m = 20, pw = 210;
+  doc.setFillColor(15,23,42); doc.rect(0,0,pw,36,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(255,255,255);
+  doc.text('SoilAI Cloud Lab — Moisture Content Report', m, 14);
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(148,163,184);
+  doc.text(`Generated: ${new Date().toLocaleString('en-IN')}   Engineer: ${currentUser?.displayName || currentUser?.email}`, m, 24);
+  let y = 50;
+  doc.setTextColor(15,23,42); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  doc.text('Input Data', m, y); y += 2;
+  doc.setDrawColor(59,130,246); doc.setLineWidth(0.4); doc.line(m,y,pw-m,y); y += 8;
+  const rows = [['Sample Label', lastResult.label||'—'],['W1 (Empty Container)', lastResult.W1+' g'],['W2 (Container + Wet Soil)', lastResult.W2+' g'],['W3 (Container + Dry Soil)', lastResult.W3+' g'],['Water Weight (W2−W3)', lastResult.waterWt.toFixed(4)+' g'],['Dry Soil Weight (W3−W1)', lastResult.drySoilWt.toFixed(4)+' g']];
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  rows.forEach(([k,v]) => { doc.setTextColor(100,116,139); doc.text(k+':', m, y); doc.setTextColor(15,23,42); doc.text(v, m+70, y); y += 8; });
+  y += 6;
+  doc.setFillColor(235,243,255); doc.roundedRect(m,y,pw-2*m,28,3,3,'F');
+  doc.setDrawColor(59,130,246); doc.setLineWidth(0.5); doc.roundedRect(m,y,pw-2*m,28,3,3,'S');
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(59,130,246);
+  doc.text('Moisture Content Result:', m+8, y+10);
+  doc.setFontSize(20); doc.setTextColor(37,99,235);
+  doc.text(lastResult.result.toFixed(4)+'  %', m+8, y+22);
+  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(71,85,105);
+  doc.text('Formula: w = ((W2−W3) / (W3−W1)) × 100', pw-m-100, y+18);
+  y += 40;
+  doc.setFillColor(15,23,42); doc.rect(0,290,pw,10,'F');
+  doc.setFontSize(7); doc.setTextColor(148,163,184); doc.setFont('helvetica','normal');
+  doc.text('SoilAI Cloud Lab — Geotechnical Engineering Analytics | Cloud & Distributed Computing', m, 296);
+  doc.save(`SoilAI_MC_${lastResult.label||'result'}_${Date.now()}.pdf`);
+  showToast('PDF downloaded!', 'success');
+};
+
+// ── Helpers ──────────────────────────────────────────────────
+function showFieldErr(id, msg) { const e=document.getElementById(id); e.textContent=msg; e.style.display='block'; }
+function showErr(msg) { const e=document.getElementById('mc-error'); e.textContent=msg; e.style.display='block'; }
+function clearErrors() {
+  document.querySelectorAll('.error-msg').forEach(e=>{e.textContent='';e.style.display='none';});
+  const me=document.getElementById('mc-error'); if(me) me.style.display='none';
+}
+function showToast(msg, type='info') {
+  const t=document.getElementById('toast'); t.textContent=msg;
+  t.className=`toast toast-${type} show`;
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ── Sidebar / Logout ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const btn=document.getElementById('menu-toggle'), sb=document.getElementById('sidebar');
+  if(btn&&sb) btn.addEventListener('click',()=>sb.classList.toggle('open'));
+  document.getElementById('logout-btn')?.addEventListener('click', async()=>{
+    const {handleLogout}=await import('/js/auth.js'); handleLogout();
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoilAI Cloud Lab — Dashboard</title>
+  <meta name="description" content="Real-time geotechnical analytics dashboard with cloud-synchronized soil test results.">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <div class="app-layout">
+    <!-- ═══ SIDEBAR ═══════════════════════════════════════════ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div style="font-size:22px;">🧪</div>
+        <div>
+          <div class="app-name">SoilAI Cloud Lab</div>
+          <div class="app-tagline">Geo Analytics</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="/dashboard" class="nav-link active" id="nav-dashboard">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="/moisture" class="nav-link" id="nav-moisture">
+          <span class="nav-icon">💧</span> Moisture Content
+        </a>
+        <a href="/proctor" class="nav-link" id="nav-proctor">
+          <span class="nav-icon">🧪</span> Proctor Test
+        </a>
+        <a href="/reports" class="nav-link" id="nav-reports">
+          <span class="nav-icon">📄</span> Reports
+        </a>
+
+        <div class="nav-section-label" style="margin-top:8px">Distributed Systems</div>
+        <div class="nav-link" style="cursor:default">
+          <span class="nav-icon">☁️</span>
+          <span style="flex:1">Cloud Nodes</span>
+          <span class="badge badge-success" style="font-size:9px">4 Online</span>
+        </div>
+        <div class="nav-link" style="cursor:default">
+          <span class="nav-icon">🔄</span>
+          <span style="flex:1">Sync Status</span>
+          <span id="connection-status" style="font-size:11px;color:#10b981">● Live</span>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost" style="width:100%;justify-content:center;gap:8px" id="logout-btn">
+          🚪 Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- ═══ MAIN ═══════════════════════════════════════════════ -->
+    <div class="main-content">
+      <!-- Navbar -->
+      <header class="navbar">
+        <div style="display:flex;align-items:center;gap:14px">
+          <button class="btn btn-ghost btn-icon" id="menu-toggle">☰</button>
+          <div class="navbar-title">
+            📊 <span>Dashboard</span>
+            <span class="badge badge-success" style="font-size:10px">Live</span>
+          </div>
+        </div>
+        <div class="navbar-actions">
+          <span id="connection-status" style="font-size:12px;color:#10b981;font-weight:600">● Live Sync</span>
+          <a href="/proctor" class="btn btn-primary btn-sm">+ New Test</a>
+          <div class="user-chip">
+            <div class="user-avatar" id="user-avatar">E</div>
+            <span class="user-name" id="user-display-name">Engineer</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Body -->
+      <main class="page-body">
+        <!-- Page Header -->
+        <div class="page-header fade-in">
+          <h1 class="page-title">Geotechnical Analytics Dashboard</h1>
+          <p class="page-desc">Real-time cloud-synchronized soil test results • Distributed Computing Systems Demo</p>
+        </div>
+
+        <!-- ── Stat Cards ── -->
+        <div class="grid-4" style="margin-bottom:24px">
+          <div class="glass stat-card fade-in" style="--card-accent:linear-gradient(90deg,#3b82f6,#60a5fa);animation-delay:0.05s">
+            <span class="stat-icon">🧪</span>
+            <div class="stat-label">Total Tests</div>
+            <div class="stat-value" id="stat-total-tests">—</div>
+            <div class="stat-sub">All compaction tests</div>
+          </div>
+          <div class="glass stat-card fade-in" style="--card-accent:linear-gradient(90deg,#a855f7,#c084fc);animation-delay:0.10s">
+            <span class="stat-icon">💧</span>
+            <div class="stat-label">Avg Moisture Content</div>
+            <div class="stat-value" id="stat-avg-mc">—</div>
+            <div class="stat-sub">Across all trials</div>
+          </div>
+          <div class="glass stat-card fade-in" style="--card-accent:linear-gradient(90deg,#10b981,#34d399);animation-delay:0.15s">
+            <span class="stat-icon">⚖️</span>
+            <div class="stat-label">Avg Dry Density</div>
+            <div class="stat-value" id="stat-avg-dd">—</div>
+            <div class="stat-sub">g/cm³ average</div>
+          </div>
+          <div class="glass stat-card fade-in" style="--card-accent:linear-gradient(90deg,#f59e0b,#fbbf24);animation-delay:0.20s">
+            <span class="stat-icon">🎯</span>
+            <div class="stat-label">Latest OMC</div>
+            <div class="stat-value" id="stat-best-omc">—</div>
+            <div class="stat-sub">Most recent test</div>
+          </div>
+        </div>
+
+        <!-- ── Chart + Activity ── -->
+        <div class="grid-5-3" style="margin-bottom:24px">
+          <!-- Compaction Chart -->
+          <div class="glass chart-card fade-in" style="animation-delay:0.25s">
+            <div class="chart-card-header">
+              <span class="chart-card-title">📈 Moisture Content vs Dry Density</span>
+              <span class="badge badge-info">Latest Test</span>
+            </div>
+            <div class="chart-wrapper" style="height:300px">
+              <canvas id="dashboard-chart"></canvas>
+            </div>
+            <div style="display:flex;gap:16px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(59,130,246,0.1)">
+              <div class="highlight-bar">🎯 OMC: Peak moisture for max density</div>
+              <div class="highlight-bar" style="border-color:rgba(16,185,129,0.3);color:#34d399">⭐ MDD: Maximum dry density point</div>
+            </div>
+          </div>
+
+          <!-- Activity Feed -->
+          <div class="glass" style="padding:20px;animation-delay:0.3s" class="fade-in">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+              <span style="font-size:14px;font-weight:700">⚡ Real-Time Activity</span>
+              <span class="badge badge-success">● Live</span>
+            </div>
+            <div id="activity-feed">
+              <div class="activity-empty">Loading activity…</div>
+            </div>
+
+            <!-- Distributed System Nodes -->
+            <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(59,130,246,0.1)">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#475569;margin-bottom:12px">
+                ☁️ Cloud Nodes
+              </div>
+              <div class="node-item" id="node-flask">
+                <span class="node-dot online"></span><span>Flask API Server</span>
+                <span class="node-status">online</span>
+              </div>
+              <div class="node-item" id="node-firestore">
+                <span class="node-dot online"></span><span>Firestore DB</span>
+                <span class="node-status">online</span>
+              </div>
+              <div class="node-item" id="node-auth">
+                <span class="node-dot online"></span><span>Firebase Auth</span>
+                <span class="node-status">online</span>
+              </div>
+              <div class="node-item" id="node-realtime">
+                <span class="node-dot active"></span><span>Real-Time Sync</span>
+                <span class="node-status" style="color:#60a5fa">active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Engineering Knowledge Base & Insights ── -->
+        <div class="grid-2" style="margin-bottom:24px">
+          <!-- Knowledge Base -->
+          <div class="glass fade-in" style="padding:24px; animation-delay:0.4s">
+            <div class="section-divider" style="margin-bottom:18px">📚 Engineering Knowledge Base</div>
+            <div class="info-grid" style="grid-template-columns: 1fr; gap: 16px; margin-top: 0">
+              <div class="info-card glass">
+                <div class="info-title">💧 Moisture Content (MC)</div>
+                <div class="info-desc">Percentage of water in soil mass. Essential for lubrication of soil particles during compaction. Typical range: 5% - 25%.</div>
+              </div>
+              <div class="info-card glass" style="border-left-color: var(--green)">
+                <div class="info-title">⚖️ Dry Density (DD)</div>
+                <div class="info-desc">Mass of soil solids per unit volume. Higher dry density indicates better load-bearing capacity. Typical range: 1.4 - 2.1 g/cm³.</div>
+              </div>
+              <div class="info-card glass" style="border-left-color: var(--amber)">
+                <div class="info-title">🎯 Optimum Moisture Content (OMC)</div>
+                <div class="info-desc">The specific moisture level where a soil can be compacted to its maximum possible dry density.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Insights Panel -->
+          <div class="glass fade-in" style="padding:24px; animation-delay:0.45s">
+            <div class="section-divider" style="margin-bottom:18px">💡 Engineering Insights</div>
+            <div class="info-grid" style="grid-template-columns: 1fr; gap: 16px; margin-top: 0">
+              <div class="info-card glass" style="border-left-color: var(--purple)">
+                <div class="info-title">🛠️ Compaction Tips</div>
+                <ul class="info-desc" style="margin-left: 18px; list-style-type: disc;">
+                  <li>Compact in thin layers (lifts) for maximum efficiency.</li>
+                  <li>Maintain moisture within ±2% of OMC for best results.</li>
+                  <li>Use heavy vibratory rollers for granular soils.</li>
+                  <li>Use sheep-foot rollers for cohesive clayey soils.</li>
+                </ul>
+              </div>
+              <div class="info-card glass" style="border-left-color: var(--blue-400)">
+                <div class="info-title">📊 Standard Proctor Test</div>
+                <div class="info-desc">A laboratory method to determine the relationship between moisture content and dry density using a 2.5kg rammer.</div>
+                <div class="info-stats">
+                  <span class="stat-tag">2.5kg Hammer</span>
+                  <span class="stat-tag">300mm Drop</span>
+                  <span class="stat-tag">3 Layers</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Recent Tests Table ── -->
+        <div class="glass table-card fade-in" style="animation-delay:0.35s">
+          <div class="table-card-header">
+            <span class="table-card-title">🗂️ Recent Soil Tests</span>
+            <div style="display:flex;gap:10px;align-items:center">
+              <span class="badge badge-info">Firestore Sync</span>
+              <a href="/proctor" class="btn btn-primary btn-sm">+ New Test</a>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Test ID</th>
+                  <th>Name</th>
+                  <th>Date</th>
+                  <th>Avg MC</th>
+                  <th>Avg DD</th>
+                  <th>OMC / MDD</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="recent-tests-tbody">
+                <tr><td colspan="7" style="text-align:center;padding:30px;color:#475569">
+                  <div class="loading-spinner-lg" style="width:28px;height:28px;margin:0 auto 10px"></div>
+                  Loading from Firestore…
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script type="module" src="/js/dashboard.js"></script>
+</body>
+</html>

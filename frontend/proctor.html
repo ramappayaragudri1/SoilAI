@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoilAI — Standard Proctor Compaction Test</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
+<div class="toast" id="toast"></div>
+
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div style="font-size:22px">🧪</div>
+      <div><div class="app-name">SoilAI Cloud Lab</div><div class="app-tagline">Geo Analytics</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Modules</div>
+      <a href="/dashboard" class="nav-link"><span class="nav-icon">📊</span> Dashboard</a>
+      <a href="/moisture" class="nav-link"><span class="nav-icon">💧</span> Moisture Content</a>
+      <a href="/proctor" class="nav-link active"><span class="nav-icon">🧪</span> Proctor Test</a>
+      <a href="/reports" class="nav-link"><span class="nav-icon">📄</span> Reports</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost" style="width:100%;justify-content:center" id="logout-btn">🚪 Sign Out</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="navbar">
+      <div style="display:flex;align-items:center;gap:14px">
+        <button class="btn btn-ghost btn-icon" id="menu-toggle">☰</button>
+        <div class="navbar-title">🧪 Standard Proctor Compaction Test</div>
+      </div>
+      <div class="navbar-actions">
+        <span style="font-size:12px;color:#10b981;font-weight:600" id="sync-status">● Firestore Sync</span>
+        <div class="user-chip">
+          <div class="user-avatar" id="user-avatar">E</div>
+          <span class="user-name" id="user-display-name">Engineer</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-body">
+      <!-- Header -->
+      <div class="page-header fade-in" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px">
+        <div>
+          <h1 class="page-title">Standard Proctor Compaction Test</h1>
+          <p class="page-desc">Add trials → Calculate per trial → Run complete analysis → Get OMC & MDD</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="loadSampleData()">📋 Sample Data</button>
+          <button class="btn btn-ghost btn-sm" onclick="addTrial()">＋ Add Trial</button>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════════
+           OBSERVATION SECTION — Standard Proctor Lab Record
+           ═══════════════════════════════════════════════════════════════════ -->
+      <div class="glass fade-in" id="observation-section" style="margin-bottom:24px;border:1px solid rgba(59,130,246,0.25);border-radius:16px;overflow:hidden">
+
+        <!-- Section Header -->
+        <div style="background:linear-gradient(135deg,rgba(37,99,235,0.25),rgba(15,23,50,0.6));padding:18px 24px;border-bottom:1px solid rgba(59,130,246,0.18);display:flex;align-items:center;gap:12px">
+          <span style="font-size:20px">🧪</span>
+          <div>
+            <div style="font-size:15px;font-weight:800;color:#e2e8f0;letter-spacing:0.01em">Observation</div>
+            <div style="font-size:11px;color:#475569;margin-top:2px">Standard Proctor Compaction Test — Laboratory Equipment Record</div>
+          </div>
+          <div style="margin-left:auto;padding:4px 12px;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.25);border-radius:20px;font-size:10px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:0.06em">IS: 2720 (Part 7)</div>
+        </div>
+
+        <!-- Fixed Equipment Specification Cards -->
+        <div style="padding:22px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#475569;margin-bottom:14px">Equipment Specifications</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+
+            <!-- Height of Mould -->
+            <div style="background:rgba(5,12,32,0.6);border:1px solid rgba(59,130,246,0.18);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden">
+              <div style="position:absolute;top:0;left:0;width:3px;height:100%;background:#3b82f6;border-radius:3px 0 0 3px"></div>
+              <div style="font-size:10px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Height of Mould</div>
+              <div style="font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#60a5fa">15 <span style="font-size:13px;color:#64748b;font-weight:500">cm</span></div>
+            </div>
+
+            <!-- Diameter of Mould -->
+            <div style="background:rgba(5,12,32,0.6);border:1px solid rgba(59,130,246,0.18);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden">
+              <div style="position:absolute;top:0;left:0;width:3px;height:100%;background:#6366f1;border-radius:3px 0 0 3px"></div>
+              <div style="font-size:10px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Diameter of Mould</div>
+              <div style="font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#818cf8">18 <span style="font-size:13px;color:#64748b;font-weight:500">cm</span></div>
+            </div>
+
+            <!-- Number of Layers -->
+            <div style="background:rgba(5,12,32,0.6);border:1px solid rgba(16,185,129,0.18);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden">
+              <div style="position:absolute;top:0;left:0;width:3px;height:100%;background:#10b981;border-radius:3px 0 0 3px"></div>
+              <div style="font-size:10px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Number of Layers</div>
+              <div style="font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#34d399">2 <span style="font-size:13px;color:#64748b;font-weight:500">layers</span></div>
+            </div>
+
+            <!-- Blows per Layer -->
+            <div style="background:rgba(5,12,32,0.6);border:1px solid rgba(16,185,129,0.18);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden">
+              <div style="position:absolute;top:0;left:0;width:3px;height:100%;background:#059669;border-radius:3px 0 0 3px"></div>
+              <div style="font-size:10px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Blows per Layer</div>
+              <div style="font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#6ee7b7">24 <span style="font-size:13px;color:#64748b;font-weight:500">blows</span></div>
+            </div>
+
+            <!-- Mass of Hammer -->
+            <div style="background:rgba(5,12,32,0.6);border:1px solid rgba(245,158,11,0.18);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden">
+              <div style="position:absolute;top:0;left:0;width:3px;height:100%;background:#f59e0b;border-radius:3px 0 0 3px"></div>
+              <div style="font-size:10px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Mass of Hammer</div>
+              <div style="font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#fbbf24">2.7 <span style="font-size:13px;color:#64748b;font-weight:500">kg</span></div>
+            </div>
+
+            <!-- Drop Height -->
+            <div style="background:rgba(5,12,32,0.6);border:1px solid rgba(245,158,11,0.18);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden">
+              <div style="position:absolute;top:0;left:0;width:3px;height:100%;background:#d97706;border-radius:3px 0 0 3px"></div>
+              <div style="font-size:10px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Drop Height</div>
+              <div style="font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#fcd34d">27 <span style="font-size:13px;color:#64748b;font-weight:500">cm</span></div>
+            </div>
+
+          </div>
+
+          <!-- Volume of Mould (auto-calculated) -->
+          <div style="margin-top:16px;padding:12px 16px;background:rgba(59,130,246,0.06);border:1px dashed rgba(59,130,246,0.2);border-radius:8px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <span style="font-size:11px;color:#475569">📐 Mould Volume:</span>
+            <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#60a5fa">V = π/4 × d² × h = π/4 × 18² × 15 ≈ <strong>3817.0 cm³</strong></code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formula Reference -->
+      <div class="glass fade-in" style="padding:14px 22px;margin-bottom:22px;display:flex;gap:28px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#475569">Formulas</span>
+        <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#60a5fa">MC(%) = ((W2−W3)/(W3−W1))×100</code>
+        <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#34d399">DD = Wet Density / (1 + MC/100)</code>
+        <span style="font-size:12px;color:#64748b;margin-left:auto">OMC = MC at max DD &nbsp;|&nbsp; MDD = max(DD)</span>
+      </div>
+
+      <!-- Test Metadata -->
+      <div class="glass fade-in" style="padding:22px;margin-bottom:22px">
+        <div class="section-divider" style="margin-bottom:16px">📋 Test Information</div>
+        <div class="grid-3" style="gap:14px">
+          <div class="form-group">
+            <label class="form-label" style="color:#94a3b8">Test Name</label>
+            <input type="text" id="test-name" class="form-input" placeholder="e.g. Site A Compaction Test">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="color:#94a3b8">Location / Site</label>
+            <input type="text" id="test-location" class="form-input" placeholder="e.g. Block-C Runway">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="color:#94a3b8">Soil Type</label>
+            <select id="soil-type" class="form-input">
+              <option value="">— Select —</option>
+              <option>Silty Clay</option><option>Sandy Clay</option>
+              <option>Gravelly Sand</option><option>Clayey Silt</option>
+              <option>Well-graded Gravel</option><option>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trial Cards -->
+      <div class="section-divider" style="margin-bottom:16px">🔬 Trial Data</div>
+      <div id="trials-container" style="display:flex;flex-direction:column;gap:16px"></div>
+
+      <!-- Add Trial Zone -->
+      <div class="add-trial-zone" onclick="addTrial()" style="margin-top:14px">＋ Add Trial</div>
+
+      <!-- Run Analysis Button -->
+      <div style="text-align:center;margin:28px 0 10px">
+        <button id="run-btn" onclick="runFullAnalysis()"
+          style="background:linear-gradient(135deg,#2563eb,#1d4ed8);box-shadow:0 4px 24px rgba(37,99,235,0.45);border:1px solid rgba(96,165,250,0.3);color:#fff;padding:15px 44px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;display:inline-flex;align-items:center;gap:10px;transition:all 0.25s">
+          ⚡ Run Complete Compaction Analysis
+        </button>
+        <p style="font-size:12px;color:#475569;margin-top:8px">Requires minimum 2 trials to determine OMC &amp; MDD</p>
+      </div>
+
+      <!-- RESULTS SECTION (hidden until analysis runs) -->
+      <div id="results-section" style="display:none">
+
+        <!-- Analytics Cards -->
+        <div class="section-divider" style="margin:24px 0 16px">📊 Analysis Results</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px" id="analytics-cards">
+          <div class="glass" style="padding:18px;position:relative;overflow:hidden;border-top:2px solid #3b82f6">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#475569;margin-bottom:8px">Total Trials</div>
+            <div id="card-trials" style="font-size:24px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#f1f5f9">—</div>
+            <div style="font-size:30px;position:absolute;right:14px;top:14px;opacity:0.15">🔬</div>
+          </div>
+          <div class="glass" style="padding:18px;position:relative;overflow:hidden;border-top:2px solid #a855f7">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#475569;margin-bottom:8px">Avg MC</div>
+            <div id="card-avg-mc" style="font-size:24px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#c084fc">—</div>
+            <div style="font-size:30px;position:absolute;right:14px;top:14px;opacity:0.15">💧</div>
+          </div>
+          <div class="glass" style="padding:18px;position:relative;overflow:hidden;border-top:2px solid #10b981">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#475569;margin-bottom:8px">Avg DD</div>
+            <div id="card-avg-dd" style="font-size:24px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#34d399">—</div>
+            <div style="font-size:30px;position:absolute;right:14px;top:14px;opacity:0.15">⚖️</div>
+          </div>
+          <div class="glass" style="padding:18px;position:relative;overflow:hidden;border-top:2px solid #60a5fa">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#475569;margin-bottom:8px">OMC</div>
+            <div id="card-omc" style="font-size:24px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#60a5fa">—</div>
+            <div style="font-size:30px;position:absolute;right:14px;top:14px;opacity:0.15">🎯</div>
+          </div>
+          <div class="glass" style="padding:18px;position:relative;overflow:hidden;border-top:2px solid #34d399">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#475569;margin-bottom:8px">MDD</div>
+            <div id="card-mdd" style="font-size:24px;font-weight:800;font-family:'JetBrains Mono',monospace;color:#34d399">—</div>
+            <div style="font-size:30px;position:absolute;right:14px;top:14px;opacity:0.15">⭐</div>
+          </div>
+        </div>
+
+        <!-- Compaction Curve Graph -->
+        <div class="glass fade-in" style="padding:24px;margin-bottom:24px;background:rgba(8,14,35,0.85);border-color:rgba(59,130,246,0.25)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-size:14px;font-weight:700;color:#e2e8f0">📈 Standard Proctor Compaction Curve</div>
+              <div style="font-size:11px;color:#475569;margin-top:3px">Moisture Content (%) vs Dry Density (g/cc)</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button onclick="exportChartPNG()" class="btn btn-ghost btn-sm">🖼️ Export PNG</button>
+              <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;font-size:12px">
+                <span style="color:#64748b">OMC:</span>
+                <span id="graph-omc" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:#60a5fa">—</span>
+                <span style="color:#64748b;margin-left:8px">MDD:</span>
+                <span id="graph-mdd" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:#34d399">—</span>
+              </div>
+            </div>
+          </div>
+          <div style="position:relative;height:380px">
+            <canvas id="compaction-chart"></canvas>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(59,130,246,0.08);flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b">
+              <div style="width:24px;height:3px;background:#3b82f6;border-radius:2px"></div> Compaction Curve
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b">
+              <div style="width:10px;height:10px;background:#fbbf24;border-radius:50%"></div> OMC / MDD Peak
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════
+             FINAL RESULT / CONCLUSION SECTION (placed directly below graph)
+             ═══════════════════════════════════════════════════════════════════ -->
+        <div id="proctor-conclusion-section" style="margin-bottom:24px;display:none">
+          <div style="background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(5,12,32,0.75));border:1px solid rgba(16,185,129,0.32);border-radius:14px;padding:24px 28px;position:relative;overflow:hidden">
+            <!-- Left accent bar -->
+            <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:linear-gradient(180deg,#10b981,#3b82f6);border-radius:4px 0 0 4px"></div>
+            <!-- Decorative background glow -->
+            <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(16,185,129,0.08),transparent 70%);pointer-events:none"></div>
+            <div style="display:flex;align-items:flex-start;gap:14px;padding-left:8px">
+              <span style="font-size:26px;margin-top:2px">📌</span>
+              <div style="flex:1">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#10b981;margin-bottom:10px">Final Result &amp; Conclusion</div>
+                <p id="proctor-conclusion-text" style="font-size:14.5px;font-weight:500;color:#e2e8f0;line-height:1.8;margin:0">
+                  —
+                </p>
+                <!-- Highlighted metric chips -->
+                <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap">
+                  <div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);border-radius:20px">
+                    <div style="width:8px;height:8px;background:#34d399;border-radius:50%"></div>
+                    <span style="font-size:12px;color:#64748b">MDD:</span>
+                    <span id="conc-mdd" style="font-family:'JetBrains Mono',monospace;font-weight:800;font-size:13px;color:#34d399">—</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.25);border-radius:20px">
+                    <div style="width:8px;height:8px;background:#60a5fa;border-radius:50%"></div>
+                    <span style="font-size:12px;color:#64748b">OMC:</span>
+                    <span id="conc-omc" style="font-family:'JetBrains Mono',monospace;font-weight:800;font-size:13px;color:#60a5fa">—</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════════
+             OBSERVATION DATA TABLE — Horizontal Lab Calculation Sheet
+             ═══════════════════════════════════════════════════════════════════ -->
+        <div class="glass table-card fade-in" style="margin-bottom:24px;border:1px solid rgba(59,130,246,0.22)">
+          <div class="table-card-header" style="background:linear-gradient(135deg,rgba(37,99,235,0.2),rgba(15,23,50,0.5));padding:16px 22px;border-bottom:1px solid rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:16px">📋</span>
+              <div>
+                <div style="font-weight:700;color:#e2e8f0;font-size:14px">Observation Data Table</div>
+                <div style="font-size:10px;color:#475569;margin-top:1px">Horizontal Laboratory Record — Standard Proctor Compaction Test (IS: 2720 Part 7)</div>
+              </div>
+            </div>
+            <div style="font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em">Auto-updated after analysis</div>
+          </div>
+          <div style="overflow-x:auto">
+            <!-- thead & tbody fully generated by JS after analysis -->
+            <table id="obs-lab-table" style="width:100%;border-collapse:collapse;font-family:'Inter',sans-serif;font-size:13px">
+              <thead id="obs-lab-thead">
+                <tr>
+                  <td colspan="10" style="text-align:center;padding:28px;color:#334155;font-style:italic;font-size:13px">
+                    Run the analysis to populate the observation sheet ↑
+                  </td>
+                </tr>
+              </thead>
+              <tbody id="obs-lab-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Original Trial-by-Trial Results (Raw Weights) -->
+        <div class="glass table-card fade-in" style="margin-bottom:24px">
+          <div class="table-card-header">
+            <span class="table-card-title">🔬 Trial-by-Trial Results (Raw Weights)</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>W1 (g)</th><th>W2 (g)</th><th>W3 (g)</th>
+                  <th>Wet Density</th><th>MC (%)</th><th>Dry Density</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="results-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Engineering Interpretation & Summary -->
+        <div class="section-divider" style="margin:24px 0 16px">🧠 Engineering Interpretation</div>
+        <div class="glass interpretation-panel fade-in">
+          <div class="interpretation-header">
+            <div class="interpretation-title">Soil Compaction Analysis Summary</div>
+            <div id="status-indicator" class="status-dot-indicator dot-moderate">
+              <span id="status-dot">●</span> <span id="status-text">Pending Analysis</span>
+            </div>
+          </div>
+          
+          <div id="eng-summary" class="interpretation-summary">
+            Please run the complete analysis to generate engineering insights based on your trial data.
+          </div>
+
+          <div class="grid-2" style="margin-bottom: 20px;">
+            <div class="info-card glass" style="padding: 12px 16px;">
+              <div class="info-title" style="font-size: 12px;">📈 Average Performance</div>
+              <div class="info-desc" style="font-size: 12px;">
+                Average Moisture: <span id="avg-mc-val" class="text-highlight">—</span><br>
+                Average Dry Density: <span id="avg-dd-val" class="text-highlight">—</span>
+              </div>
+            </div>
+            <div class="info-card glass" style="padding: 12px 16px; border-left-color: var(--amber);">
+              <div class="info-title" style="font-size: 12px;">⚖️ Result Comparison</div>
+              <div id="comparison-text" class="info-desc" style="font-size: 12px;">
+                Waiting for OMC/MDD data to compare with field trials...
+              </div>
+            </div>
+          </div>
+
+          <div id="conclusion-box" class="conclusion-box">
+            <span style="font-weight: 700; color: var(--text-primary);">Dynamic Conclusion:</span>
+            <p id="conclusion-text" style="margin-top: 8px;">Run analysis to see field recommendations.</p>
+          </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="section-divider" style="margin-bottom:16px">💡 Engineering Recommendations</div>
+        <div id="recommendations-container" style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px"></div>
+
+        <!-- PDF Button -->
+        <div style="text-align:center;padding:20px 0">
+          <button onclick="generatePDF()"
+            style="background:linear-gradient(135deg,#d97706,#b45309);color:#fff;padding:14px 36px;border-radius:12px;font-size:15px;font-weight:700;border:none;cursor:pointer;font-family:'Inter',sans-serif;display:inline-flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(217,119,6,0.35)">
+            📄 Download Full PDF Report
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="module" src="/js/proctor.js"></script>
+</body>
+</html>

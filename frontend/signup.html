@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoilAI Cloud Lab — Create Account</title>
+  <meta name="description" content="Create your SoilAI Cloud Lab account and start running professional geotechnical soil tests.">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <div class="auth-page">
+    <!-- ── Left Brand ── -->
+    <div class="auth-brand">
+      <div class="brand-orb-1"></div>
+      <div class="brand-orb-2"></div>
+      <div class="brand-logo">
+        <div class="brand-icon">🧪</div>
+        <div>
+          <div class="brand-name">SoilAI Cloud Lab</div>
+          <div class="brand-tagline">Geotechnical Analytics</div>
+        </div>
+      </div>
+      <div class="brand-content">
+        <div>
+          <h1 class="brand-headline">Join the<br><span>Engineering</span><br>Cloud Platform</h1>
+          <p class="brand-sub">
+            Get started with professional soil compaction analysis. Your data is
+            securely stored in Firebase Firestore and synced across all your devices.
+          </p>
+        </div>
+        <div class="brand-features">
+          <div class="brand-feature">
+            <div class="feat-icon">🔐</div>
+            <div class="feat-text">
+              <h4>Secure Firebase Authentication</h4>
+              <p>Industry-standard OAuth2 & JWT token security</p>
+            </div>
+          </div>
+          <div class="brand-feature">
+            <div class="feat-icon">📱</div>
+            <div class="feat-text">
+              <h4>Access Anywhere</h4>
+              <p>Real-time sync — works on any device, anytime</p>
+            </div>
+          </div>
+          <div class="brand-feature">
+            <div class="feat-icon">📄</div>
+            <div class="feat-text">
+              <h4>PDF Report Generation</h4>
+              <p>Professional engineering reports at one click</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="brand-footer">
+        <div class="brand-badge">● Cloud Storage: Firebase Firestore</div>
+      </div>
+    </div>
+
+    <!-- ── Right Form ── -->
+    <div class="auth-form-panel">
+      <div class="auth-form-container fade-in">
+        <div class="auth-form-header">
+          <h2 class="auth-form-title">Create account</h2>
+          <p class="auth-form-subtitle">Join SoilAI Cloud Lab — it's free</p>
+        </div>
+
+        <div id="success-toast"></div>
+
+        <form class="auth-form" onsubmit="handleSignup(event)" novalidate>
+          <div id="form-error" class="error-msg"></div>
+
+          <div class="form-group">
+            <label class="form-label" for="name">Full Name</label>
+            <div class="input-wrapper">
+              <span class="input-icon">👤</span>
+              <input type="text" id="name" class="form-input" placeholder="Eng. Ramesh Kumar" autocomplete="name" required>
+            </div>
+            <span class="error-msg" id="name-error"></span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="email">Email Address</label>
+            <div class="input-wrapper">
+              <span class="input-icon">📧</span>
+              <input type="email" id="email" class="form-input" placeholder="engineer@company.com" autocomplete="email" required>
+            </div>
+            <span class="error-msg" id="email-error"></span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="organization">Organization <span style="color:#475569;font-weight:400">(optional)</span></label>
+            <div class="input-wrapper">
+              <span class="input-icon">🏢</span>
+              <input type="text" id="organization" class="form-input" placeholder="ABC Geotechnical Pvt. Ltd.">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <div class="input-wrapper has-toggle">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="password" class="form-input" placeholder="Min. 6 characters" autocomplete="new-password"
+                     oninput="checkStrength(this.value)" required>
+              <button type="button" class="password-toggle" onclick="togglePwd('password',this)">👁️</button>
+            </div>
+            <div class="password-strength" id="strength-bars">
+              <div class="strength-bar" id="s1"></div>
+              <div class="strength-bar" id="s2"></div>
+              <div class="strength-bar" id="s3"></div>
+              <div class="strength-bar" id="s4"></div>
+            </div>
+            <span class="error-msg" id="password-error"></span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="confirm-password">Confirm Password</label>
+            <div class="input-wrapper has-toggle">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="confirm-password" class="form-input" placeholder="Re-enter password" autocomplete="new-password" required>
+              <button type="button" class="password-toggle" onclick="togglePwd('confirm-password',this)">👁️</button>
+            </div>
+            <span class="error-msg" id="confirm-error"></span>
+          </div>
+
+          <label class="terms-check">
+            <input type="checkbox" id="terms" required>
+            <span>I agree to the Terms of Service and Privacy Policy</span>
+          </label>
+
+          <button type="submit" class="btn btn-primary btn-lg auth-submit-btn" id="signup-btn">
+            Create Account →
+          </button>
+        </form>
+
+        <div class="auth-footer">
+          Already have an account? <a href="/" class="auth-link">Sign in</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import '/js/auth.js';
+
+    window.togglePwd = (id, btn) => {
+      const inp = document.getElementById(id);
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+      btn.textContent = inp.type === 'password' ? '👁️' : '🙈';
+    };
+
+    window.checkStrength = (val) => {
+      const bars = ['s1','s2','s3','s4'];
+      bars.forEach(b => { document.getElementById(b).className = 'strength-bar'; });
+      if (!val) return;
+      let score = 0;
+      if (val.length >= 6)  score++;
+      if (val.length >= 10) score++;
+      if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
+      if (/[^A-Za-z0-9]/.test(val)) score++;
+      const cls = score <= 1 ? 'weak' : score <= 2 ? 'medium' : 'strong';
+      for (let i = 0; i < score; i++) {
+        document.getElementById(bars[i]).classList.add(cls);
+      }
+    };
+  </script>
+</body>
+</html>

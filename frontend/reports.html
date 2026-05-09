@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoilAI Cloud Lab — Reports</title>
+  <meta name="description" content="View and download PDF reports for all your saved soil tests.">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div style="font-size:22px">🧪</div>
+        <div>
+          <div class="app-name">SoilAI Cloud Lab</div>
+          <div class="app-tagline">Geo Analytics</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Modules</div>
+        <a href="/dashboard" class="nav-link"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="/moisture" class="nav-link"><span class="nav-icon">💧</span> Moisture Content</a>
+        <a href="/proctor" class="nav-link"><span class="nav-icon">🧪</span> Proctor Test</a>
+        <a href="/reports" class="nav-link active"><span class="nav-icon">📄</span> Reports</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost" style="width:100%;justify-content:center" id="logout-btn">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="main-content">
+      <header class="navbar">
+        <div style="display:flex;align-items:center;gap:14px">
+          <button class="btn btn-ghost btn-icon" id="menu-toggle">☰</button>
+          <div class="navbar-title">📄 <span>Reports</span></div>
+        </div>
+        <div class="navbar-actions">
+          <div class="user-chip">
+            <div class="user-avatar" id="user-avatar">E</div>
+            <span class="user-name" id="user-display-name">Engineer</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="page-body">
+        <div class="page-header fade-in" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px">
+          <div>
+            <h1 class="page-title">Test Reports</h1>
+            <p class="page-desc">All soil tests synced from Firestore — generate PDF reports anytime</p>
+          </div>
+          <a href="/proctor" class="btn btn-primary">+ New Proctor Test</a>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="glass fade-in" style="padding:14px 20px;margin-bottom:22px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="search-input" class="form-input" style="max-width:280px" placeholder="🔍 Search tests…" oninput="filterTests()">
+          <select id="status-filter" class="form-input" style="max-width:180px" onchange="filterTests()">
+            <option value="">All Statuses</option>
+            <option value="calculated">Calculated</option>
+          </select>
+          <span id="report-count" style="font-size:13px;color:#64748b;margin-left:auto">Loading...</span>
+        </div>
+
+        <!-- Reports List -->
+        <div id="reports-list" class="fade-in">
+          <div style="text-align:center;padding:60px 20px;color:#475569" id="loading-spinner">
+            <div class="spinner" style="margin:0 auto 16px;border-width:3px;border-top-color:#3b82f6;width:32px;height:32px"></div>
+            <p>Loading reports from Firestore…</p>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script type="module">
+    import { auth, db, COLLECTIONS } from '/js/firebase-config.js';
+    import {
+      collection, query, where, orderBy, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+
+    let allTests = [];
+    let currentUser = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) { window.location.href = '/'; return; }
+      currentUser = user;
+      const nameEl = document.getElementById('user-display-name');
+      const avEl   = document.getElementById('user-avatar');
+      if (nameEl) nameEl.textContent = user.displayName || user.email;
+      if (avEl)   avEl.textContent   = (user.displayName || user.email || 'U')[0].toUpperCase();
+
+      fetchReports(user.uid);
+    });
+
+    function fetchReports(uid) {
+      try {
+        const q = query(
+          collection(db, 'soilTests'),
+          where('uid', '==', uid)
+        );
+
+        onSnapshot(q, (snap) => {
+          allTests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          // Sort client-side to avoid requiring a composite index in Firestore
+          allTests.sort((a, b) => {
+            const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+            const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+            return timeB - timeA; // Descending
+          });
+          renderList(allTests);
+        }, (err) => {
+          console.error("Firestore listener error:", err);
+          document.getElementById('reports-list').innerHTML = `
+            <div class="glass" style="padding:60px;text-align:center">
+              <h3 style="color:#f87171;margin-bottom:8px">Error Loading Reports</h3>
+              <p style="color:#475569">Could not fetch data from Firestore. Please check console.</p>
+            </div>`;
+        });
+      } catch (err) {
+        console.error("Query setup error:", err);
+      }
+    }
+
+    function renderList(tests) {
+      const container = document.getElementById('reports-list');
+      const countEl   = document.getElementById('report-count');
+      if (countEl) countEl.textContent = `${tests.length} report${tests.length !== 1 ? 's' : ''}`;
+
+      if (tests.length === 0) {
+        container.innerHTML = `
+          <div class="glass" style="padding:60px;text-align:center">
+            <div style="font-size:48px;margin-bottom:16px">📄</div>
+            <h3 style="color:#94a3b8;margin-bottom:8px">No reports yet</h3>
+            <p style="color:#475569;margin-bottom:20px">Run your first Proctor test to generate reports</p>
+            <a href="/proctor" class="btn btn-primary">+ New Proctor Test</a>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = tests.map((test, i) => {
+        const date = test.createdAt?.toDate ? test.createdAt.toDate() : new Date();
+        const dateStr = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+        return `
+          <div class="report-item fade-in" style="animation-delay:${i*0.04}s">
+            <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0">
+              <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:12px;font-size:22px;flex-shrink:0">📊</div>
+              <div style="min-width:0">
+                <h4 style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                  ${test.testName || 'Untitled Test'}
+                </h4>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+                  <span style="font-size:12px;color:#64748b">${dateStr}</span>
+                  ${test.location ? `<span style="font-size:12px;color:#475569">📍 ${test.location}</span>` : ''}
+                  ${test.soilType ? `<span class="badge badge-neutral" style="font-size:10px">${test.soilType}</span>` : ''}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:20px;align-items:center;flex-shrink:0;flex-wrap:wrap">
+              <div style="text-align:center">
+                <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.06em">OMC</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#60a5fa">${test.results?.omc?.toFixed(2) || '—'}%</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.06em">MDD</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#34d399">${test.results?.mdd?.toFixed(3) || '—'}</div>
+              </div>
+              <button class="btn btn-amber btn-sm" onclick="downloadReport('${test.id}')">📄 PDF</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    window.filterTests = () => {
+      const search = document.getElementById('search-input').value.toLowerCase();
+      const status = document.getElementById('status-filter').value;
+      const filtered = allTests.filter(t => {
+        const nameMatch   = (t.testName || '').toLowerCase().includes(search);
+        const statusMatch = !status || (t.results?.status === status);
+        return nameMatch && statusMatch;
+      });
+      renderList(filtered);
+    };
+
+    window.downloadReport = (testId) => {
+      const test = allTests.find(t => t.id === testId);
+      if (!test) return;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      const margin = 20, pageW = 210;
+      let y = 20;
+
+      // Header
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, 0, pageW, 38, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(255,255,255);
+      doc.text('SoilAI Cloud Lab — Proctor Test Report', margin, 15);
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(148,163,184);
+      const date = test.createdAt?.toDate ? test.createdAt.toDate() : new Date();
+      doc.text(`Date: ${date.toLocaleDateString('en-IN')}  |  Engineer: ${currentUser?.displayName || currentUser?.email}`, margin, 23);
+      doc.text(`Test: ${test.testName || '—'}  |  Location: ${test.location || '—'}  |  Soil: ${test.soilType || '—'}`, margin, 30);
+
+      y = 50;
+
+      // Results summary
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(15,23,42);
+      doc.text('Key Results', margin, y); y += 2;
+      doc.setDrawColor(59,130,246); doc.setLineWidth(0.4); doc.line(margin, y, pageW-margin, y); y += 7;
+
+      const metrics = [
+        ['OMC', test.results?.omc?.toFixed(4)+'%', [59,130,246]],
+        ['MDD', test.results?.mdd?.toFixed(4)+' g/cm³', [16,185,129]],
+        ['Avg MC', test.results?.average_moisture_content?.toFixed(4)+'%', [168,85,247]],
+        ['Avg DD', test.results?.average_dry_density?.toFixed(4)+' g/cm³', [245,158,11]]
+      ];
+      metrics.forEach(([k,v,c], i) => {
+        const bx = margin + (i % 2) * 92, by = y + Math.floor(i/2)*22;
+        doc.setFillColor(...c.map(x=>Math.round(x*0.1+232)));
+        doc.roundedRect(bx, by, 82, 18, 2, 2, 'F');
+        doc.setFillColor(...c); doc.rect(bx, by, 2.5, 18, 'F');
+        doc.setFontSize(8); doc.setTextColor(100,116,139); doc.setFont('helvetica','normal');
+        doc.text(k, bx+5, by+6);
+        doc.setFontSize(10); doc.setTextColor(...c); doc.setFont('helvetica','bold');
+        doc.text(v, bx+5, by+13);
+      });
+      y += 52;
+
+      // Trial table
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(15,23,42);
+      doc.text('Trial Data', margin, y); y += 2;
+      doc.line(margin, y, pageW-margin, y); y += 6;
+      const headers = ['#','W1','W2','W3','Wet Den.','MC(%)','DD(g/cc)'];
+      const colW    = [10, 24, 24, 24, 26, 22, 28];
+      doc.setFillColor(241,245,249); doc.rect(margin, y-4, pageW-2*margin, 8, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(71,85,105);
+      let cx = margin;
+      headers.forEach((h,i) => { doc.text(h, cx+1, y); cx+=colW[i]; });
+      y += 5;
+      doc.setFont('helvetica','normal');
+      (test.trials||[]).forEach((t,ri) => {
+        if(y>265){doc.addPage();y=20;}
+        cx = margin;
+        if(ri%2===0){doc.setFillColor(248,250,252);doc.rect(margin,y-4,pageW-2*margin,8,'F');}
+        doc.setTextColor(15,23,42);
+        [t.trial_number,t.W1,t.W2,t.W3,t.wet_density,t.moisture_content?.toFixed(4),t.dry_density?.toFixed(4)].forEach((v,i)=>{
+          doc.text(String(v??''),cx+1,y); cx+=colW[i];
+        });
+        y+=7;
+      });
+
+      // Footer
+      doc.setFillColor(15,23,42); doc.rect(0,290,pageW,10,'F');
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(148,163,184);
+      doc.text('SoilAI Cloud Lab — Cloud Computing & Distributed Systems', margin, 296);
+
+      doc.save(`SoilAI_${test.testName||'Report'}_${Date.now()}.pdf`);
+      showToast('PDF downloaded!', 'success');
+    };
+
+    function showToast(msg, type='info') {
+      const t = document.getElementById('toast');
+      if(!t) return;
+      t.textContent = msg;
+      t.className = `toast toast-${type} show`;
+      clearTimeout(t._timer);
+      t._timer = setTimeout(()=>t.classList.remove('show'), 3500);
+    }
+
+    // Sidebar & logout
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const m = document.getElementById('menu-toggle');
+      const s = document.getElementById('sidebar');
+      if(m&&s) m.addEventListener('click',()=>s.classList.toggle('open'));
+      const lb = document.getElementById('logout-btn');
+      if(lb) lb.addEventListener('click', async ()=>{
+        const { handleLogout } = await import('/js/auth.js');
+        handleLogout();
+      });
+    });
+  </script>
+</body>
+</html>

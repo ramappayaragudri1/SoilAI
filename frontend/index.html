@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoilAI Cloud Lab — Login</title>
+  <meta name="description" content="Sign in to SoilAI Cloud Lab — Professional Geotechnical Engineering Analytics Platform powered by Cloud Computing.">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <div class="auth-page">
+    <!-- ── Left Branding Panel ── -->
+    <div class="auth-brand">
+      <div class="brand-orb-1"></div>
+      <div class="brand-orb-2"></div>
+
+      <div class="brand-logo">
+        <div class="brand-icon">🧪</div>
+        <div>
+          <div class="brand-name">SoilAI Cloud Lab</div>
+          <div class="brand-tagline">Geotechnical Analytics</div>
+        </div>
+      </div>
+
+      <div class="brand-content">
+        <div>
+          <h1 class="brand-headline">
+            Intelligent<br><span>Soil Analysis</span><br>in the Cloud
+          </h1>
+          <p class="brand-sub">
+            Calculate OMC, MDD, Moisture Content, and Dry Density with real-time
+            cloud synchronization across your distributed engineering team.
+          </p>
+        </div>
+
+        <div class="brand-features">
+          <div class="brand-feature">
+            <div class="feat-icon">☁️</div>
+            <div class="feat-text">
+              <h4>Cloud-Powered Calculations</h4>
+              <p>Flask API + Firebase Firestore real-time sync</p>
+            </div>
+          </div>
+          <div class="brand-feature">
+            <div class="feat-icon">📊</div>
+            <div class="feat-text">
+              <h4>Interactive Compaction Curves</h4>
+              <p>Chart.js visualization with OMC/MDD peak detection</p>
+            </div>
+          </div>
+          <div class="brand-feature">
+            <div class="feat-icon">🌐</div>
+            <div class="feat-text">
+              <h4>Distributed Multi-User Access</h4>
+              <p>Live data sync across all devices instantly</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="brand-footer">
+        <div class="brand-badge">● Firestore Real-Time Sync Active</div>
+      </div>
+    </div>
+
+    <!-- ── Right Form Panel ── -->
+    <div class="auth-form-panel">
+      <div class="auth-form-container fade-in">
+        <div class="auth-form-header">
+          <h2 class="auth-form-title">Welcome back</h2>
+          <p class="auth-form-subtitle">Sign in to your SoilAI Cloud Lab account</p>
+        </div>
+
+        <div id="success-toast"></div>
+
+        <form class="auth-form" onsubmit="handleLogin(event)" novalidate id="login-form">
+          <div id="form-error" class="error-msg"></div>
+
+          <div class="form-group">
+            <label class="form-label" for="email">Email Address</label>
+            <div class="input-wrapper">
+              <span class="input-icon">📧</span>
+              <input
+                type="email" id="email" name="email" autocomplete="email"
+                class="form-input" placeholder="engineer@company.com" required>
+            </div>
+            <span class="error-msg" id="email-error"></span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <div class="input-wrapper has-toggle">
+              <span class="input-icon">🔒</span>
+              <input
+                type="password" id="password" name="password" autocomplete="current-password"
+                class="form-input" placeholder="Enter your password" required>
+              <button type="button" class="password-toggle" onclick="togglePwd('password', this)" id="pwd-toggle">👁️</button>
+            </div>
+            <span class="error-msg" id="password-error"></span>
+          </div>
+
+          <div class="forgot-link">
+            <a href="/forgot-password" class="auth-link">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg auth-submit-btn" id="login-btn">
+            Sign In →
+          </button>
+        </form>
+
+        <div class="auth-divider">or</div>
+
+        <div class="auth-footer">
+          Don't have an account? <a href="/signup" class="auth-link">Create account</a>
+        </div>
+
+        <div style="margin-top:32px; padding-top:20px; border-top:1px solid rgba(59,130,246,0.1); text-align:center;">
+          <p style="font-size:11px;color:#334155;margin-bottom:8px;">DISTRIBUTED COMPUTING STACK</p>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+            <span class="badge badge-info">Firebase Auth</span>
+            <span class="badge badge-info">Firestore</span>
+            <span class="badge badge-info">Flask API</span>
+            <span class="badge badge-info">Chart.js</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import '/js/auth.js';
+
+    // Password visibility toggle
+    window.togglePwd = (id, btn) => {
+      const inp = document.getElementById(id);
+      if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+      else { inp.type = 'password'; btn.textContent = '👁️'; }
+    };
+  </script>
+</body>
+</html>
