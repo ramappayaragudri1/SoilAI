@@ -1,6 +1,6 @@
 /**
  * SoilAI Cloud Lab — Soil Test Input & Calculation Module
- * Handles dynamic trial input, Flask API call, Firestore storage, and PDF generation
+ * All calculations run client-side (no backend required)
  */
 
 import { auth, db, COLLECTIONS } from './firebase-config.js';
@@ -14,7 +14,90 @@ import { renderCompactionChart } from './charts.js';
 let currentUser  = null;
 let trialCount   = 3;
 let lastResults  = null;
-const API_BASE   = window.location.origin;
+
+// ─── Client-Side Calculation Engine (ported from Python backend) ───────────────
+function calcMoisture(W1, W2, W3) {
+  const water = W2 - W3;
+  const dry   = W3 - W1;
+  if (dry <= 0) throw new Error('W3 must be > W1');
+  if (water < 0) throw new Error('W2 must be >= W3');
+  return Math.round((water / dry) * 100 * 10000) / 10000;
+}
+
+function calcDryDensity(wetDensity, moistureContent) {
+  if (wetDensity <= 0) throw new Error('Wet density must be > 0');
+  return Math.round((wetDensity / (1 + moistureContent / 100)) * 10000) / 10000;
+}
+
+function findOMCMDD(trials) {
+  if (trials.length >= 3) {
+    const n = trials.length;
+    let sx=0, sx2=0, sx3=0, sx4=0, sy=0, sxy=0, sx2y=0;
+    trials.forEach(t => {
+      const x = t.moisture_content, y = t.dry_density;
+      sx+=x; sx2+=x*x; sx3+=x*x*x; sx4+=x*x*x*x;
+      sy+=y; sxy+=x*y; sx2y+=x*x*y;
+    });
+    const det = m => m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])
+                   - m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])
+                   + m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+    const M  = [[sx4,sx3,sx2],[sx3,sx2,sx],[sx2,sx,n]];
+    const dM = det(M);
+    if (Math.abs(dM) > 1e-10) {
+      const a = det([[sx2y,sx3,sx2],[sxy,sx2,sx],[sy,sx,n]]) / dM;
+      const b = det([[sx4,sx2y,sx2],[sx3,sxy,sx],[sx2,sy,n]]) / dM;
+      const c = det([[sx4,sx3,sx2y],[sx3,sx2,sxy],[sx2,sx,sy]]) / dM;
+      if (a < 0) {
+        const omc = -b / (2 * a);
+        const mdd = a*omc*omc + b*omc + c;
+        const minMc = Math.min(...trials.map(t=>t.moisture_content));
+        const maxMc = Math.max(...trials.map(t=>t.moisture_content));
+        if (omc >= minMc-2 && omc <= maxMc+2) {
+          return { omc: Math.round(omc*10000)/10000, mdd: Math.round(mdd*10000)/10000, fit: {a,b,c} };
+        }
+      }
+    }
+  }
+  const peak = trials.reduce((p,c) => c.dry_density > p.dry_density ? c : p);
+  return { omc: peak.moisture_content, mdd: peak.dry_density, fit: null };
+}
+
+function getRecommendations(mc, omc, dd, mdd) {
+  const recs = [];
+  let status = 'optimal';
+  const diff = mc - omc;
+  const ratio = mdd > 0 ? (dd/mdd)*100 : 0;
+  if (mc < omc * 0.9) { status='dry'; recs.push({type:'warning',icon:'💧',title:'Add Water',message:`MC (${mc.toFixed(2)}%) is significantly below OMC (${omc.toFixed(2)}%).`,action:`Increase moisture by ~${Math.abs(diff).toFixed(2)}%`}); }
+  else if (mc < omc)  { status='slightly_dry'; recs.push({type:'info',icon:'💧',title:'Slightly Dry',message:`MC (${mc.toFixed(2)}%) is slightly below OMC (${omc.toFixed(2)}%).`,action:`Increase moisture by ~${Math.abs(diff).toFixed(2)}%`}); }
+  else if (mc > omc * 1.1) { status='wet'; recs.push({type:'warning',icon:'🔥',title:'Dry the Soil',message:`MC (${mc.toFixed(2)}%) is significantly above OMC (${omc.toFixed(2)}%).`,action:`Reduce moisture by ~${Math.abs(diff).toFixed(2)}%`}); }
+  else if (mc > omc)  { status='slightly_wet'; recs.push({type:'info',icon:'🔥',title:'Slightly Wet',message:`MC (${mc.toFixed(2)}%) is slightly above OMC (${omc.toFixed(2)}%).`,action:`Reduce moisture by ~${Math.abs(diff).toFixed(2)}%`}); }
+  if (ratio >= 97) { status='optimal'; recs.push({type:'success',icon:'✅',title:'Proper Compaction Achieved',message:`DD (${dd.toFixed(4)} g/cm³) is near MDD (${mdd.toFixed(4)} g/cm³) at ${ratio.toFixed(1)}%.`,action:'Maintain current compaction effort'}); }
+  else if (ratio >= 90) { recs.push({type:'info',icon:'⚠️',title:'Good Compaction',message:`Dry density is at ${ratio.toFixed(1)}% of MDD.`,action:'Increase compaction effort slightly'}); }
+  else { recs.push({type:'error',icon:'❌',title:'Insufficient Compaction',message:`DD (${dd.toFixed(4)} g/cm³) is only ${ratio.toFixed(1)}% of MDD.`,action:'Significantly increase compaction effort'}); }
+  return { recs, status };
+}
+
+function processSoilTest(trialsData, testName, location, soilType) {
+  const processed = trialsData.map((t, i) => {
+    const W1=parseFloat(t.W1), W2=parseFloat(t.W2), W3=parseFloat(t.W3), wd=parseFloat(t.wet_density);
+    const mc = calcMoisture(W1, W2, W3);
+    const dd = calcDryDensity(wd, mc);
+    return { trial_number:i+1, W1, W2, W3, wet_density:wd, moisture_content:mc, dry_density:dd, water_content_g:Math.round((W2-W3)*10000)/10000, dry_soil_g:Math.round((W3-W1)*10000)/10000 };
+  });
+  const { omc, mdd, fit } = findOMCMDD(processed);
+  const avgMc = processed.reduce((s,t)=>s+t.moisture_content,0)/processed.length;
+  const avgDd = processed.reduce((s,t)=>s+t.dry_density,0)/processed.length;
+  const { recs, status } = getRecommendations(avgMc, omc, avgDd, mdd);
+  return { trials:processed, omc, mdd, regression_fit:fit, average_moisture_content:Math.round(avgMc*10000)/10000, average_dry_density:Math.round(avgDd*10000)/10000, recommendations:recs, status, trial_count:processed.length, test_name:testName, location, soil_type:soilType, calculated_at:new Date().toISOString() };
+}
+
+const SAMPLE_TRIALS = [
+  {W1:25.0, W2:162.5, W3:150.0, wet_density:1.87},
+  {W1:25.0, W2:165.0, W3:150.0, wet_density:2.07},
+  {W1:25.0, W2:167.5, W3:150.0, wet_density:2.19},
+  {W1:25.0, W2:170.0, W3:150.0, wet_density:2.18},
+  {W1:25.0, W2:172.5, W3:150.0, wet_density:2.065}
+];
 
 // ─── Auth Gate ────────────────────────────────────────────────────────────────
 onAuthStateChanged(auth, (user) => {
@@ -109,9 +192,9 @@ function createTrialCard(num) {
   return div;
 }
 
-// ─── Live Preview (single trial calculation) ──────────────────────────────────
+// ─── Live Preview (client-side) ───────────────────────────────────────────────
 const previewDebounce = {};
-async function previewTrial(input) {
+function previewTrial(input) {
   const card = input.closest('.trial-card');
   const num  = card.querySelector('.trial-number').textContent;
   const liveEl = document.getElementById(`live-result-${num}`);
@@ -124,53 +207,33 @@ async function previewTrial(input) {
   if ([W1, W2, W3, wd].some(isNaN)) return;
 
   clearTimeout(previewDebounce[num]);
-  previewDebounce[num] = setTimeout(async () => {
+  previewDebounce[num] = setTimeout(() => {
     try {
-      const res = await fetch(`${API_BASE}/api/calculate/single-trial`, {
-        method : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ W1, W2, W3, wet_density: wd })
-      });
-      const json = await res.json();
-      if (json.success && liveEl) {
-        liveEl.innerHTML = `
-          <span class="live-mc">MC: <b>${json.moisture_content.toFixed(2)}%</b></span>
-          <span class="live-dd">DD: <b>${json.dry_density.toFixed(4)}</b></span>`;
-      }
+      const mc = calcMoisture(W1, W2, W3);
+      const dd = calcDryDensity(wd, mc);
+      if (liveEl) liveEl.innerHTML = `
+        <span class="live-mc">MC: <b>${mc.toFixed(2)}%</b></span>
+        <span class="live-dd">DD: <b>${dd.toFixed(4)}</b></span>`;
     } catch (_) {}
-  }, 400);
+  }, 300);
 }
 
 // ─── Load Sample Data ─────────────────────────────────────────────────────────
-async function loadSampleData() {
-  try {
-    const res  = await fetch(`${API_BASE}/api/sample-data`);
-    const json = await res.json();
-    if (!json.success) return;
-
-    const trials = json.sample_trials;
-    const cards  = document.querySelectorAll('.trial-card');
-
-    // Remove extra cards, keep at least as many as sample trials
-    while (document.querySelectorAll('.trial-card').length < trials.length) addTrial();
-
-    document.querySelectorAll('.trial-card').forEach((card, i) => {
-      if (i >= trials.length) { card.remove(); return; }
-      const t = trials[i];
-      card.querySelector('[name="W1"]').value         = t.W1;
-      card.querySelector('[name="W2"]').value         = t.W2;
-      card.querySelector('[name="W3"]').value         = t.W3;
-      card.querySelector('[name="wet_density"]').value = t.wet_density;
-    });
-
-    document.getElementById('test-name').value     = 'Sample Compaction Test';
-    document.getElementById('soil-type').value     = 'Silty Clay';
-    document.getElementById('test-location').value = 'Demo Site, Block-A';
-
-    showToast('Sample data loaded! Click "Run Calculation" to see results.', 'success');
-  } catch (e) {
-    showToast('Failed to load sample data', 'error');
-  }
+function loadSampleData() {
+  const trials = SAMPLE_TRIALS;
+  while (document.querySelectorAll('.trial-card').length < trials.length) addTrial();
+  document.querySelectorAll('.trial-card').forEach((card, i) => {
+    if (i >= trials.length) { card.remove(); return; }
+    const t = trials[i];
+    card.querySelector('[name="W1"]').value          = t.W1;
+    card.querySelector('[name="W2"]').value          = t.W2;
+    card.querySelector('[name="W3"]').value          = t.W3;
+    card.querySelector('[name="wet_density"]').value = t.wet_density;
+  });
+  document.getElementById('test-name').value     = 'Sample Compaction Test';
+  document.getElementById('soil-type').value     = 'Silty Clay';
+  document.getElementById('test-location').value = 'Demo Site, Block-A';
+  showToast('Sample data loaded! Click "Run Calculation" to see results.', 'success');
 }
 
 // ─── Main Calculation ─────────────────────────────────────────────────────────
@@ -207,42 +270,27 @@ async function runCalculation() {
   }
 
   try {
-    // Call Flask calculation API
-    const res = await fetch(`${API_BASE}/api/calculate`, {
-      method : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body   : JSON.stringify({ trials, test_name: testName, location, soil_type: soilType })
-    });
+    // Client-side calculation (no backend needed)
+    const results = processSoilTest(trials, testName, location, soilType);
 
-    const json = await res.json();
+    lastResults = results;
+    lastResults.testName = testName;
+    lastResults.location = location;
+    lastResults.soilType = soilType;
 
-    if (!json.success) {
-      showToast(json.error || 'Calculation failed', 'error');
-      if (json.details) json.details.forEach(d => showToast(d, 'error'));
-      setLoading(btn, false, 'Run Calculation');
-      return;
-    }
+    displayResults(results);
+    renderChart(results);
 
-    lastResults = json.data;
-    lastResults.testName  = testName;
-    lastResults.location  = location;
-    lastResults.soilType  = soilType;
-
-    displayResults(json.data);
-    renderChart(json.data);
-
-    // Save to Firestore (Distributed Cloud Storage)
-    await saveToFirestore(json.data);
+    // Save to Firestore
+    await saveToFirestore(results);
 
     setLoading(btn, false, 'Run Calculation');
     showToast('Calculation complete & saved to cloud!', 'success');
-
-    // Scroll to results
     document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
 
   } catch (err) {
     setLoading(btn, false, 'Run Calculation');
-    showToast('Server error: ' + err.message, 'error');
+    showToast('Error: ' + err.message, 'error');
   }
 }
 
